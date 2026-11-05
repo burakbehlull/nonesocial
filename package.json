@@ -1,0 +1,20 @@
+{
+  "name": "none-video-chat",
+  "version": "1.0.0",
+  "description": "WebRTC Video + Audio Chat Application",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "keywords": ["webrtc", "video-chat", "socket.io"],
+  "author": "Burak <@burakbehlull>",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1",
+    "nanoid": "^5.1.5",
+    "dotenv": "^16.4.5"
+  }
+}
