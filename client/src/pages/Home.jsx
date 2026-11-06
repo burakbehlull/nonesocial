@@ -8,6 +8,7 @@ import { useTheme } from '@contexts/ThemeContext';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@components/ui/card';
+import Footer from '@components/Footer';
 
 const Home = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -59,9 +60,9 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-secondary/20 p-4">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Dark Mode Toggle - Top Right */}
-      <div className="fixed top-4 right-4">
+      <div className="fixed top-4 right-4 z-50">
         <Button
           variant="ghost"
           size="icon"
@@ -72,80 +73,106 @@ const Home = () => {
         </Button>
       </div>
 
-      <div className="w-full max-w-4xl">
-        {/* Hero */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            <FiVideo className="w-8 h-8 text-primary" />
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-7xl">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            
+            {/* Left Side - Hero */}
+            <div className="space-y-8">
+              <div className="space-y-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10">
+                  <FiVideo className="w-8 h-8 text-primary" />
+                </div>
+                <h1 className="text-5xl md:text-6xl font-bold leading-tight">
+                  <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                    None Social
+                  </span>
+                </h1>
+                <p className="text-muted-foreground text-xl leading-relaxed max-w-md">
+                  Kayıt olmadan, anonim olarak görüntülü sohbet et
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button
+                  size="lg"
+                  className="text-lg px-8 py-6"
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  <FiVideo className="w-5 h-5 mr-2" />
+                  Yeni Oda
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="text-lg px-8 py-6"
+                  onClick={() => setShowJoinModal(true)}
+                >
+                  <FiLogIn className="w-5 h-5 mr-2" />
+                  Odaya Katıl
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Side - Features */}
+            <div className="grid gap-6">
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-xl bg-primary/10">
+                      <FiVideo className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl mb-2">Video & Ses</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Gerçek zamanlı görüntülü görüşme
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-xl bg-primary/10">
+                      <FiLock className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl mb-2">Özel Odalar</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Parola korumalı odalar oluştur
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-xl bg-primary/10">
+                      <FiUsers className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl mb-2">Grup Görüşmeleri</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Birden fazla kişiyle konuş
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </div>
+
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-            None Social
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-md mx-auto">
-            Kayıt olmadan, anonim olarak görüntülü sohbet et
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-16 max-w-md mx-auto">
-          <Button
-            size="lg"
-            className="flex-1"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <FiVideo className="w-5 h-5 mr-2" />
-            Yeni Oda
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1"
-            onClick={() => setShowJoinModal(true)}
-          >
-            <FiLogIn className="w-5 h-5 mr-2" />
-            Odaya Katıl
-          </Button>
-        </div>
-
-        {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <FiVideo className="w-8 h-8 text-primary mb-2" />
-              <CardTitle className="text-lg">Video & Ses</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Gerçek zamanlı görüntülü görüşme
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <FiLock className="w-8 h-8 text-primary mb-2" />
-              <CardTitle className="text-lg">Özel Odalar</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Parola korumalı odalar oluştur
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <FiUsers className="w-8 h-8 text-primary mb-2" />
-              <CardTitle className="text-lg">Grup Görüşmeleri</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Birden fazla kişiyle konuş
-              </p>
-            </CardContent>
-          </Card>
         </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Create Room Modal */}
       {showCreateModal && (

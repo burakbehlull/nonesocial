@@ -1,13 +1,15 @@
 services:
   - type: web
-    name: none-social-client
+    name: nonesocial-backend
     env: node
+    region: frankfurt
+    plan: free
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /health
     envVars:
-      - key: PORT
-        value: 3000
       - key: NODE_ENV
         value: production
       - key: CLIENT_URL
-        fromGroup: client-url
+        value: https://your-frontend-url.vercel.app
+    # After deployment, update CLIENT_URL with your actual Vercel URL
