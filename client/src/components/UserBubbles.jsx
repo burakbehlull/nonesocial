@@ -27,7 +27,7 @@ const UserBubble = ({ user, isInCall, hasAudio, isCurrentUser }) => {
         </div>
       </div>
 
-      {/* Name */}
+      {/* Name + Status */}
       <div className="flex flex-col items-center gap-0.5">
         <div className="flex items-center gap-1">
           {user.role === 'owner' && (
@@ -40,6 +40,14 @@ const UserBubble = ({ user, isInCall, hasAudio, isCurrentUser }) => {
         {isCurrentUser && (
           <span className="text-[10px] text-muted-foreground">(Sen)</span>
         )}
+        {/* Durum: Seste veya Çevrimdışı */}
+        <span className={`text-[10px] font-medium ${
+          isInCall 
+            ? 'text-green-600 dark:text-green-400' 
+            : 'text-gray-500 dark:text-gray-400'
+        }`}>
+          {isInCall ? 'Seste' : 'Çevrimdışı'}
+        </span>
       </div>
     </div>
   );
@@ -66,25 +74,45 @@ const UserBubbles = ({
     };
   };
 
+  // Kaç kişi seste hesapla
+  const usersInCallCount = users.filter(user => {
+    const { isInCall } = getUserCallStatus(user.id);
+    return isInCall;
+  }).length;
+
   return (
-    <div className="flex flex-wrap gap-2 p-3 bg-muted/30 rounded-lg">
-      {users.map(user => {
-        const { isInCall, hasAudio } = getUserCallStatus(user.id);
-        
-        return (
-          <UserBubble
-            key={user.id}
-            user={user}
-            isInCall={isInCall}
-            hasAudio={hasAudio}
-            isCurrentUser={user.id === currentUserId}
-          />
-        );
-      })}
+    <div className="flex flex-col gap-2">
+      {/* Kullanıcı baloncukları */}
+      <div className="flex flex-wrap gap-2 p-3 bg-muted/30 rounded-lg">
+        {users.length === 0 ? (
+          <div className="text-xs text-muted-foreground text-center w-full py-3">
+            Henüz kullanıcı yok
+          </div>
+        ) : (
+          users.map(user => {
+            const { isInCall, hasAudio } = getUserCallStatus(user.id);
+            
+            return (
+              <UserBubble
+                key={user.id}
+                user={user}
+                isInCall={isInCall}
+                hasAudio={hasAudio}
+                isCurrentUser={user.id === currentUserId}
+              />
+            );
+          })
+        )}
+      </div>
       
-      {users.length === 0 && (
-        <div className="text-sm text-muted-foreground text-center w-full py-4">
-          Henüz kullanıcı yok
+      {/* İstatistik */}
+      {users.length > 0 && (
+        <div className="text-center px-3">
+          <span className="text-xs font-medium">
+            <span className="text-green-600 dark:text-green-400">{usersInCallCount}</span>
+            {' '}
+            <span className="text-muted-foreground">kullanıcı seste</span>
+          </span>
         </div>
       )}
     </div>

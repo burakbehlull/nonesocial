@@ -341,7 +341,7 @@ export default function Room() {
         
         {/* LEFT - Video Grid + User Bubbles */}
         <div className="w-80 border-r bg-card flex flex-col">
-          {/* User Bubbles */}
+          {/* User Bubbles - TÜM kullanıcılar */}
           <div className="border-b">
             <div className="p-3">
               <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
