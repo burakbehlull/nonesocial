@@ -7,6 +7,7 @@ import { useRoomStore } from '@store/roomStore';
 import { useTheme } from '@contexts/ThemeContext';
 import VideoGrid from '@components/VideoGrid';
 import UserBubbles from '@components/UserBubbles';
+import ChatMessages from '@components/ChatMessages';
 import { Card } from '@components/ui/card';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
@@ -378,47 +379,7 @@ export default function Room() {
           </div>
           
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center text-muted-foreground">
-                  <FiSend className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-lg">Henüz mesaj yok</p>
-                  <p className="text-sm">Konuşmaya başla!</p>
-                </div>
-              </div>
-            ) : (
-              messages.map((msg) => {
-                const isSelf = msg.from === currentUserId;
-                const msgIsOwner = msg.role === 'owner';
-                
-                return (
-                  <div key={msg.id} className={`flex ${isSelf ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] ${isSelf ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
-                      <div className="flex items-center gap-2 px-1">
-                        <span className="text-sm font-semibold text-muted-foreground">
-                          {msg.name}
-                        </span>
-                        {msgIsOwner && <FaCrown className="w-3.5 h-3.5 text-yellow-500" />}
-                        <span className="text-xs text-muted-foreground">
-                          {formatTime(msg.timestamp)}
-                        </span>
-                      </div>
-                      <div
-                        className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                          isSelf
-                            ? 'bg-primary text-primary-foreground rounded-br-sm'
-                            : 'bg-muted rounded-bl-sm'
-                        }`}
-                      >
-                        {msg.content}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <ChatMessages messages={messages} currentUserId={currentUserId} />
 
           {/* Message Input */}
           <div className="p-4 border-t bg-card">
