@@ -22,8 +22,9 @@ const Footer = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 font-semibold text-foreground hover:text-primary transition-all duration-300 hover:scale-105"
+              aria-label="Paradox Forge GitHub organizasyonu"
             >
-              <FiGithub className="w-4 h-4" />
+              <FiGithub className="w-4 h-4" aria-hidden="true" />
               <span>Paradox Forge</span>
             </a>
           </div>
@@ -35,8 +36,9 @@ const Footer = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-primary transition-colors duration-300 flex items-center gap-1"
+              aria-label="GitHub'da Paradox Forge"
             >
-              <FiGithub className="w-3.5 h-3.5" />
+              <FiGithub className="w-3.5 h-3.5" aria-hidden="true" />
               <span>GitHub</span>
             </a>
             <span className="hidden sm:inline">•</span>

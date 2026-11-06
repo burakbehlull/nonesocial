@@ -277,15 +277,18 @@ export default function Room() {
             size="icon"
             onClick={toggleTheme}
             className="h-9 w-9"
+            aria-label={isDark ? 'Aydınlık moda geç' : 'Karanlık moda geç'}
+            title={isDark ? 'Aydınlık mod' : 'Karanlık mod'}
           >
-            {isDark ? <FiSun className="w-5 h-5" /> : <FiMoon className="w-5 h-5" />}
+            {isDark ? <FiSun className="w-5 h-5" aria-hidden="true" /> : <FiMoon className="w-5 h-5" aria-hidden="true" />}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowNameModal(true)}
+            aria-label="İsminizi değiştirin"
           >
-            <FiSettings className="w-4 h-4 mr-2" />
+            <FiSettings className="w-4 h-4 mr-2" aria-hidden="true" />
             İsim Değiştir
           </Button>
           {!isInCall ? (
@@ -294,8 +297,9 @@ export default function Room() {
               size="sm"
               onClick={handleJoinCall}
               className="bg-green-600 hover:bg-green-700"
+              aria-label="Video ve ses çağrısına katıl"
             >
-              <FiPhoneIncoming className="w-4 h-4 mr-2" />
+              <FiPhoneIncoming className="w-4 h-4 mr-2" aria-hidden="true" />
               Çağrıya Gir
             </Button>
           ) : (
@@ -303,8 +307,9 @@ export default function Room() {
               variant="destructive"
               size="sm"
               onClick={handleLeaveCall}
+              aria-label="Video ve ses çağrısından ayrıl"
             >
-              <FiPhoneOutgoing className="w-4 h-4 mr-2" />
+              <FiPhoneOutgoing className="w-4 h-4 mr-2" aria-hidden="true" />
               Çağrıdan Ayrıl
             </Button>
           )}
@@ -313,8 +318,9 @@ export default function Room() {
             size="sm"
             onClick={handleLeaveRoom}
             className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+            aria-label="Odadan tamamen ayrıl"
           >
-            <FiPhoneOff className="w-4 h-4 mr-2" />
+            <FiPhoneOff className="w-4 h-4 mr-2" aria-hidden="true" />
             Odadan Ayrıl
           </Button>
         </div>
@@ -405,14 +411,16 @@ export default function Room() {
                 onChange={(e) => setMessageInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 className="flex-1 h-12 text-base"
+                aria-label="Mesaj yazın"
               />
               <Button
                 size="lg"
                 onClick={handleSendMessage}
                 disabled={!messageInput.trim()}
                 className="px-6"
+                aria-label="Mesaj gönder"
               >
-                <FiSend className="w-5 h-5" />
+                <FiSend className="w-5 h-5" aria-hidden="true" />
               </Button>
             </div>
           </div>
@@ -548,16 +556,23 @@ export default function Room() {
                 onKeyPress={(e) => e.key === 'Enter' && handleChangeName()}
                 maxLength={20}
                 autoFocus
+                aria-label="Yeni kullanıcı adınız"
+                aria-required="true"
               />
               <div className="flex gap-2 mt-4">
                 <Button
                   variant="outline"
                   onClick={() => setShowNameModal(false)}
                   className="flex-1"
+                  aria-label="İptal et"
                 >
                   İptal
                 </Button>
-                <Button onClick={handleChangeName} className="flex-1">
+                <Button 
+                  onClick={handleChangeName} 
+                  className="flex-1"
+                  aria-label="İsmi kaydet"
+                >
                   Kaydet
                 </Button>
               </div>
@@ -575,19 +590,22 @@ export default function Room() {
               
               {/* Change Name */}
               <div className="mb-4">
-                <label className="text-sm font-medium text-muted-foreground block mb-2">İsim Değiştir</label>
+                <label className="text-sm font-medium text-muted-foreground block mb-2" htmlFor="edit-user-name">İsim Değiştir</label>
                 <div className="flex gap-2">
                   <Input
+                    id="edit-user-name"
                     placeholder="Yeni isim"
                     value={editingUserName}
                     onChange={(e) => setEditingUserName(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleChangeUserName()}
                     maxLength={20}
                     className="flex-1"
+                    aria-label="Kullanıcının yeni adı"
                   />
                   <Button 
                     onClick={handleChangeUserName}
                     size="sm"
+                    aria-label="İsmi değiştir"
                   >
                     Değiştir
                   </Button>
@@ -599,16 +617,18 @@ export default function Room() {
                 <Button
                   onClick={() => handleKickUser(selectedUser)}
                   className="w-full bg-yellow-600 hover:bg-yellow-700 text-white justify-start"
+                  aria-label="Kullanıcıyı odadan at"
                 >
-                  <FiUserX className="w-4 h-4 mr-2" />
+                  <FiUserX className="w-4 h-4 mr-2" aria-hidden="true" />
                   Kullanıcıyı At
                 </Button>
                 
                 <Button
                   onClick={() => handleBanUser(selectedUser)}
                   className="w-full bg-red-600 hover:bg-red-700 text-white justify-start"
+                  aria-label="Kullanıcıyı kalıcı olarak banla"
                 >
-                  <FiUserX className="w-4 h-4 mr-2" />
+                  <FiUserX className="w-4 h-4 mr-2" aria-hidden="true" />
                   Kullanıcıyı Banla
                 </Button>
               </div>
@@ -618,6 +638,7 @@ export default function Room() {
                   variant="ghost"
                   onClick={() => setShowUserMenu(false)}
                   className="w-full"
+                  aria-label="Kapat"
                 >
                   İptal
                 </Button>

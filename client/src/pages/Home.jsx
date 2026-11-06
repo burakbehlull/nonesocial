@@ -68,8 +68,10 @@ const Home = () => {
           size="icon"
           onClick={toggleTheme}
           className="h-10 w-10 rounded-full"
+          aria-label={isDark ? "Aydınlık moda geç" : "Karanlık moda geç"}
+          title={isDark ? "Aydınlık moda geç" : "Karanlık moda geç"}
         >
-          {isDark ? <FiSun className="w-5 h-5" /> : <FiMoon className="w-5 h-5" />}
+          {isDark ? <FiSun className="w-5 h-5" aria-hidden="true" /> : <FiMoon className="w-5 h-5" aria-hidden="true" />}
         </Button>
       </div>
 
@@ -100,8 +102,9 @@ const Home = () => {
                   size="lg"
                   className="text-lg px-8 py-6"
                   onClick={() => setShowCreateModal(true)}
+                  aria-label="Yeni oda oluştur"
                 >
-                  <FiVideo className="w-5 h-5 mr-2" />
+                  <FiVideo className="w-5 h-5 mr-2" aria-hidden="true" />
                   Yeni Oda
                 </Button>
                 <Button
@@ -109,8 +112,9 @@ const Home = () => {
                   size="lg"
                   className="text-lg px-8 py-6"
                   onClick={() => setShowJoinModal(true)}
+                  aria-label="Mevcut odaya katıl"
                 >
-                  <FiLogIn className="w-5 h-5 mr-2" />
+                  <FiLogIn className="w-5 h-5 mr-2" aria-hidden="true" />
                   Odaya Katıl
                 </Button>
               </div>
@@ -184,31 +188,41 @@ const Home = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Oda Adı</label>
+                <label className="text-sm font-medium mb-2 block" htmlFor="room-name-input">Oda Adı</label>
                 <Input
+                  id="room-name-input"
                   placeholder="Oda adını girin"
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
                   maxLength={30}
+                  aria-label="Oda adı"
+                  aria-required="true"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Parola (Opsiyonel)</label>
+                <label className="text-sm font-medium mb-2 block" htmlFor="room-password-input">Parola (Opsiyonel)</label>
                 <Input
+                  id="room-password-input"
                   type="password"
                   placeholder="Parola girin"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  aria-label="Oda parolası (opsiyonel)"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Maksimum Katılımcı</label>
+                <label className="text-sm font-medium mb-2 block" htmlFor="room-limit-input">Maksimum Katılımcı</label>
                 <Input
+                  id="room-limit-input"
                   type="number"
                   min="2"
                   max="20"
                   value={limit}
                   onChange={(e) => setLimit(Number(e.target.value))}
+                  aria-label="Maksimum katılımcı sayısı"
+                  aria-valuemin="2"
+                  aria-valuemax="20"
+                  aria-valuenow={limit}
                 />
               </div>
             </CardContent>
@@ -217,10 +231,15 @@ const Home = () => {
                 variant="outline"
                 onClick={() => setShowCreateModal(false)}
                 className="flex-1"
+                aria-label="İptal et ve modalı kapat"
               >
                 İptal
               </Button>
-              <Button onClick={handleCreateRoom} className="flex-1">
+              <Button 
+                onClick={handleCreateRoom} 
+                className="flex-1"
+                aria-label="Oda oluştur"
+              >
                 Oluştur
               </Button>
             </CardFooter>
@@ -238,20 +257,25 @@ const Home = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Oda ID</label>
+                <label className="text-sm font-medium mb-2 block" htmlFor="join-room-id-input">Oda ID</label>
                 <Input
+                  id="join-room-id-input"
                   placeholder="Oda ID'sini girin"
                   value={joinRoomId}
                   onChange={(e) => setJoinRoomId(e.target.value)}
+                  aria-label="Katılmak istediğiniz oda ID'si"
+                  aria-required="true"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Parola (Gerekirse)</label>
+                <label className="text-sm font-medium mb-2 block" htmlFor="join-room-password-input">Parola (Gerekirse)</label>
                 <Input
+                  id="join-room-password-input"
                   type="password"
                   placeholder="Parola girin"
                   value={joinPassword}
                   onChange={(e) => setJoinPassword(e.target.value)}
+                  aria-label="Oda parolası (gerekirse)"
                 />
               </div>
             </CardContent>
@@ -260,10 +284,15 @@ const Home = () => {
                 variant="outline"
                 onClick={() => setShowJoinModal(false)}
                 className="flex-1"
+                aria-label="İptal et ve modalı kapat"
               >
                 İptal
               </Button>
-              <Button onClick={handleJoinRoom} className="flex-1">
+              <Button 
+                onClick={handleJoinRoom} 
+                className="flex-1"
+                aria-label="Odaya katıl"
+              >
                 Katıl
               </Button>
             </CardFooter>
