@@ -171,78 +171,46 @@ export default (io, socket) => {
     }
   });
 
-  // ===== WebRTC Signaling Events =====
+  // ===== WebRTC Signaling Events (Sadece tanıştırma için) =====
+  // Video/ses backend'den GEÇMİYOR, direkt kullanıcılar arası gidiyor!
+  // Socket.io sadece kullanıcıları tanıştırıyor (signaling)
 
-  // Call user (initiate connection)
-  socket.on('call-user', ({ roomId, to, signal }) => {
-    const room = rooms[roomId];
-    if (!room) {
-      console.error(`❌ call-user: Room ${roomId} not found`);
-      return;
-    }
-
-    console.log(`📞 call-user: ${socket.id} → ${to} in room ${roomId}`);
-    
-    // Forward signal to target user
-    io.to(to).emit('incoming-call', {
+  // Offer (bağlantı teklifi)
+  socket.on('webrtc-offer', ({ to, offer, roomId }) => {
+    console.log(`📤 WebRTC Offer: ${socket.id} → ${to}`);
+    io.to(to).emit('webrtc-offer', {
       from: socket.id,
-      signal,
-      roomId
+      offer
     });
   });
 
-  // Answer call (respond to connection)
-  socket.on('answer-call', ({ to, signal }) => {
-    console.log(`📞 answer-call: ${socket.id} → ${to}`);
-    
-    io.to(to).emit('call-answered', {
+  // Answer (bağlantı kabulü)
+  socket.on('webrtc-answer', ({ to, answer }) => {
+    console.log(`📤 WebRTC Answer: ${socket.id} → ${to}`);
+    io.to(to).emit('webrtc-answer', {
       from: socket.id,
-      signal
+      answer
     });
   });
 
-  // ICE candidate exchange (critical for NAT traversal!)
-  socket.on('ice-candidate', ({ roomId, to, candidate }) => {
-    console.log(`🧊 ICE candidate: ${socket.id} → ${to}`);
-    
-    if (to) {
-      io.to(to).emit('ice-candidate', {
-        from: socket.id,
-        candidate
-      });
-    }
+  // ICE Candidate (NAT geçiş bilgisi)
+  socket.on('ice-candidate', ({ to, candidate, roomId }) => {
+    console.log(`🧊 ICE Candidate: ${socket.id} → ${to}`);
+    io.to(to).emit('ice-candidate', {
+      from: socket.id,
+      candidate
+    });
   });
 
-  // End call
+  // Arama bitti
   socket.on('end-call', ({ roomId }) => {
-    console.log(`📴 end-call: ${socket.id} in room ${roomId}`);
-    
+    console.log(`📴 Call ended: ${socket.id}`);
     socket.to(roomId).emit('call-ended', {
       from: socket.id
     });
   });
 
-  // Toggle audio status
-  socket.on('toggle-audio', ({ roomId, enabled }) => {
-    console.log(`🎤 ${socket.id} audio: ${enabled}`);
-    
-    socket.to(roomId).emit('user-audio-toggled', {
-      userId: socket.id,
-      enabled
-    });
-  });
-
-  // Toggle video status
-  socket.on('toggle-video', ({ roomId, enabled }) => {
-    console.log(`📹 ${socket.id} video: ${enabled}`);
-    
-    socket.to(roomId).emit('user-video-toggled', {
-      userId: socket.id,
-      enabled
-    });
-  });
-
-  // ===== End WebRTC Signaling Events =====
+  // ===== End WebRTC Signaling =====
 
   // Handle disconnect
   socket.on('disconnect', () => {
