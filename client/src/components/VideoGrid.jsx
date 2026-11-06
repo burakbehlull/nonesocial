@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { FiMicOff, FiVideoOff } from 'react-icons/fi';
+import { FiMicOff, FiVideoOff, FiPhoneOff } from 'react-icons/fi';
 import { FaCrown } from 'react-icons/fa';
 import { cn } from '@/lib/utils';
 import { Card } from './ui/card';
@@ -61,13 +61,42 @@ const VideoTile = ({ stream, name, isSelf, audioEnabled, videoEnabled, isOwner }
 };
 
 const VideoGrid = ({ localStream, peers, users, currentUserId, audioEnabled, videoEnabled }) => {
-  const totalVideos = 1 + Object.keys(peers).length;
+  // Sadece seste olan kullanıcıların videoları
+  const activeVideos = [];
+  
+  // Local video (eğer seste isek)
+  if (localStream) {
+    activeVideos.push({
+      stream: localStream,
+      userId: currentUserId,
+      isSelf: true,
+      audioEnabled,
+      videoEnabled
+    });
+  }
+  
+  // Remote videolar (seste olanlar)
+  Object.entries(peers).forEach(([userId, { stream }]) => {
+    if (stream) {
+      activeVideos.push({
+        stream,
+        userId,
+        isSelf: false,
+        audioEnabled: true,
+        videoEnabled: true
+      });
+    }
+  });
+  
+  const totalVideos = activeVideos.length;
   
   const getGridClass = () => {
+    if (totalVideos === 0) return 'grid-cols-1';
     if (totalVideos === 1) return 'grid-cols-1';
-    if (totalVideos === 2) return 'grid-cols-1';
-    if (totalVideos <= 4) return 'grid-cols-1';
-    return 'grid-cols-2';
+    if (totalVideos === 2) return 'grid-cols-2';
+    if (totalVideos <= 4) return 'grid-cols-2';
+    if (totalVideos <= 6) return 'grid-cols-3';
+    return 'grid-cols-3';
   };
 
   const getUserName = (userId) => {
@@ -80,27 +109,29 @@ const VideoGrid = ({ localStream, peers, users, currentUserId, audioEnabled, vid
     return user?.role === 'owner';
   };
 
-  return (
-    <div className={cn("grid gap-2 h-full", getGridClass())}>
-      {/* Local video */}
-      <VideoTile
-        stream={localStream}
-        name={getUserName(currentUserId)}
-        isSelf={true}
-        audioEnabled={audioEnabled}
-        videoEnabled={videoEnabled}
-        isOwner={isUserOwner(currentUserId)}
-      />
+  // Hiç video yoksa boş mesaj göster
+  if (totalVideos === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center text-muted-foreground">
+          <FiPhoneOff className="w-16 h-16 mx-auto mb-4 opacity-50" />
+          <p className="text-lg font-medium">Henüz kimse seste değil</p>
+          <p className="text-sm mt-2">Aramaya katılmak için "Çağrıya Katıl" butonuna tıklayın</p>
+        </div>
+      </div>
+    );
+  }
 
-      {/* Remote videos */}
-      {Object.entries(peers).map(([userId, { stream }]) => (
+  return (
+    <div className={cn("grid gap-4 h-full p-4", getGridClass())}>
+      {activeVideos.map(({ stream, userId, isSelf, audioEnabled, videoEnabled }) => (
         <VideoTile
           key={userId}
           stream={stream}
           name={getUserName(userId)}
-          isSelf={false}
-          audioEnabled={true}
-          videoEnabled={true}
+          isSelf={isSelf}
+          audioEnabled={audioEnabled}
+          videoEnabled={videoEnabled}
           isOwner={isUserOwner(userId)}
         />
       ))}
