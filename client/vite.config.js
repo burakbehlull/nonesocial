@@ -27,13 +27,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
-    },
+    minify: 'esbuild', // Faster than terser, built into Vite
     rollupOptions: {
       output: {
         manualChunks: {
@@ -45,5 +39,8 @@ export default defineConfig({
       }
     },
     chunkSizeWarningLimit: 1000
+  },
+  esbuild: {
+    drop: ['console', 'debugger'] // Remove console.log in production
   }
 })
