@@ -32,6 +32,9 @@ const Room = () => {
   const [showNameModal, setShowNameModal] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [isInCall, setIsInCall] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [editingUserName, setEditingUserName] = useState('');
 
   const {
     roomInfo,
@@ -87,6 +90,13 @@ const Room = () => {
       toast.error('Odadan atıldınız');
       handleLeaveRoom();
     });
+    socketInstance.on('banned', () => {
+      toast.error('Odadan banlandınız');
+      handleLeaveRoom();
+    });
+    socketInstance.on('nameChanged', ({ newName }) => {
+      toast.info(`İsminiz "${newName}" olarak değiştirildi`);
+    });
     socketInstance.on('roomClosed', () => {
       toast.error('Oda kapatıldı');
       handleLeaveRoom();
@@ -96,6 +106,8 @@ const Room = () => {
       socketInstance.off('roomUsers');
       socketInstance.off('receiveMessage');
       socketInstance.off('kicked');
+      socketInstance.off('banned');
+      socketInstance.off('nameChanged');
       socketInstance.off('roomClosed');
     };
   }, [roomId]);
@@ -133,8 +145,40 @@ const Room = () => {
     socket?.emit('kickUser', { roomId, targetSocketId }, (response) => {
       if (response?.success) {
         toast.success('Kullanıcı atıldı');
+        setShowUserMenu(false);
       } else {
         toast.error('Kullanıcı atılamadı');
+      }
+    });
+  };
+
+  const handleBanUser = (targetSocketId) => {
+    socket?.emit('banUser', { roomId, targetSocketId }, (response) => {
+      if (response?.success) {
+        toast.success('Kullanıcı banlandı');
+        setShowUserMenu(false);
+      } else {
+        toast.error('Kullanıcı banlanamadı');
+      }
+    });
+  };
+
+  const handleChangeUserName = () => {
+    if (!editingUserName.trim()) {
+      toast.error('Lütfen bir isim girin');
+      return;
+    }
+    socket?.emit('changeUserName', { 
+      roomId, 
+      targetSocketId: selectedUser, 
+      newName: editingUserName 
+    }, (response) => {
+      if (response?.success) {
+        toast.success('Kullanıcı ismi değiştirildi');
+        setShowUserMenu(false);
+        setEditingUserName('');
+      } else {
+        toast.error(response?.message || 'İsim değiştirilemedi');
       }
     });
   };
@@ -406,7 +450,7 @@ const Room = () => {
                 const userIsOwner = user.role === 'owner';
                 
                 return (
-                  <Card key={user.id} className="p-3">
+                  <Card key={user.id} className="p-3 group">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
                         <Avatar className="h-10 w-10 border-2 border-primary/20">
@@ -453,8 +497,12 @@ const Room = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 ml-2"
-                          onClick={() => handleKickUser(user.id)}
+                          className="h-8 w-8 ml-2 opacity-0 group-hover:opacity-100"
+                          onClick={() => {
+                            setSelectedUser(user.id);
+                            setEditingUserName(user.name || '');
+                            setShowUserMenu(true);
+                          }}
                         >
                           <FiUserX className="w-4 h-4 text-destructive" />
                         </Button>
@@ -492,6 +540,67 @@ const Room = () => {
                 </Button>
                 <Button onClick={handleChangeName} className="flex-1">
                   Kaydet
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* User Management Modal */}
+      {showUserMenu && selectedUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowUserMenu(false)}>
+          <Card className="w-full max-w-sm bg-card border" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4">
+              <h3 className="text-lg font-bold mb-4">Kullanıcı Yönetimi</h3>
+              
+              {/* Change Name */}
+              <div className="mb-4">
+                <label className="text-sm font-medium text-muted-foreground block mb-2">İsim Değiştir</label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Yeni isim"
+                    value={editingUserName}
+                    onChange={(e) => setEditingUserName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleChangeUserName()}
+                    maxLength={20}
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={handleChangeUserName}
+                    size="sm"
+                  >
+                    Değiştir
+                  </Button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                <Button
+                  onClick={() => handleKickUser(selectedUser)}
+                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-white justify-start"
+                >
+                  <FiUserX className="w-4 h-4 mr-2" />
+                  Kullanıcıyı At
+                </Button>
+                
+                <Button
+                  onClick={() => handleBanUser(selectedUser)}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white justify-start"
+                >
+                  <FiUserX className="w-4 h-4 mr-2" />
+                  Kullanıcıyı Banla
+                </Button>
+              </div>
+
+              <div className="mt-4 pt-4 border-t">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowUserMenu(false)}
+                  className="w-full"
+                >
+                  İptal
                 </Button>
               </div>
             </div>

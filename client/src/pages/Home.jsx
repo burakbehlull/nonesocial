@@ -79,7 +79,7 @@ const Home = () => {
             <FiVideo className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-            NoneChat
+            None Social
           </h1>
           <p className="text-muted-foreground text-lg max-w-md mx-auto">
             Kayıt olmadan, anonim olarak görüntülü sohbet et

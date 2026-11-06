@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: none-video-chat-server
+    name: none-social-client
     env: node
     buildCommand: npm install
     startCommand: npm start
