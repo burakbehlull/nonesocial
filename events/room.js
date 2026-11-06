@@ -165,6 +165,54 @@ export default (io, socket) => {
     }
   });
 
+  // ===== WebRTC Signaling Events =====
+
+  // Call user (initiate connection)
+  socket.on('call-user', ({ roomId, to, signal }) => {
+    const room = rooms[roomId];
+    if (!room) return;
+
+    // Forward signal to target user
+    io.to(to).emit('incoming-call', {
+      from: socket.id,
+      signal,
+      roomId
+    });
+  });
+
+  // Answer call (respond to connection)
+  socket.on('answer-call', ({ to, signal }) => {
+    io.to(to).emit('call-answered', {
+      from: socket.id,
+      signal
+    });
+  });
+
+  // End call
+  socket.on('end-call', ({ roomId }) => {
+    socket.to(roomId).emit('call-ended', {
+      from: socket.id
+    });
+  });
+
+  // Toggle audio status
+  socket.on('toggle-audio', ({ roomId, enabled }) => {
+    socket.to(roomId).emit('user-audio-toggled', {
+      userId: socket.id,
+      enabled
+    });
+  });
+
+  // Toggle video status
+  socket.on('toggle-video', ({ roomId, enabled }) => {
+    socket.to(roomId).emit('user-video-toggled', {
+      userId: socket.id,
+      enabled
+    });
+  });
+
+  // ===== End WebRTC Signaling Events =====
+
   // Handle disconnect
   socket.on('disconnect', () => {
     for (const roomId in rooms) {

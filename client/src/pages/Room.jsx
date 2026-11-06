@@ -223,9 +223,18 @@ export default function Room() {
   const handleJoinCall = async () => {
     try {
       toast.loading('Mikrofon izni isteniyor...', { id: 'join-call' });
-      await initializeMedia(false); // Sadece mikrofon
+      const stream = await initializeMedia(false); // Sadece mikrofon
       setIsInCall(true);
       toast.success('Çağrıya katıldınız! Kamerayı açmak için butona tıklayın.', { id: 'join-call' });
+      
+      // Trigger peer connections with existing users
+      console.log('Media initialized, current users:', users);
+      // Emit roomUsers request to trigger peer connections
+      socket?.emit('getRoomInfo', { roomId }, (response) => {
+        if (response.success) {
+          console.log('Room info after join call:', response);
+        }
+      });
     } catch (error) {
       toast.error('Mikrofon erişimi reddedildi', { id: 'join-call' });
       console.error('Media error:', error);
