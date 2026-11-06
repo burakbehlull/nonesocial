@@ -1,6 +1,9 @@
 import { io } from 'socket.io-client';
 
+// Fallback ile server URL
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+
+console.log('🔌 Connecting to:', SERVER_URL);
 
 let socket = null;
 
@@ -22,7 +25,8 @@ export const initSocket = () => {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
+      console.error('❌ Connection error:', error.message);
+      console.error('Server URL:', SERVER_URL);
     });
   }
 
