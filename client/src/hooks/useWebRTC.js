@@ -4,12 +4,29 @@ import { getSocket } from '@services/socket';
 
 const ICE_SERVERS = {
   iceServers: [
+    // STUN servers for NAT discovery
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-  ]
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    // Public TURN servers for NAT traversal (critical for production!)
+    { 
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    }
+  ],
+  iceCandidatePoolSize: 10
 };
 
 export const useWebRTC = (roomId) => {
@@ -97,6 +114,15 @@ export const useWebRTC = (roomId) => {
             });
           }
         }
+      });
+
+      // ICE candidate handling - CRITICAL for NAT traversal
+      peer.on('iceStateChange', (iceConnectionState, iceGatheringState) => {
+        console.log('ICE State:', iceConnectionState, 'Gathering:', iceGatheringState);
+      });
+
+      peer.on('data', (data) => {
+        console.log('Received data from peer:', userId, data.toString());
       });
 
       peer.on('stream', (remoteStream) => {
@@ -264,7 +290,7 @@ export const useWebRTC = (roomId) => {
     }
 
     const handleIncomingCall = async ({ from, signal }) => {
-      console.log('Incoming call from:', from);
+      console.log('📞 Incoming call from:', from);
       if (localStreamRef.current && from) {
         const peer = createPeer(from, false, localStreamRef.current);
         if (peer && signal) {
@@ -275,12 +301,12 @@ export const useWebRTC = (roomId) => {
           }
         }
       } else {
-        console.warn('No local stream available for incoming call');
+        console.warn('⚠️ No local stream available for incoming call');
       }
     };
 
     const handleCallAnswered = ({ from, signal }) => {
-      console.log('Call answered by:', from);
+      console.log('✅ Call answered by:', from);
       if (!from || !signal) {
         console.warn('Invalid call answered data');
         return;
@@ -295,6 +321,18 @@ export const useWebRTC = (roomId) => {
         }
       } else {
         console.warn('No peer found for answered call from:', from);
+      }
+    };
+
+    const handleIceCandidate = ({ from, candidate }) => {
+      console.log('🧊 ICE candidate from:', from);
+      const peer = peersRef.current[from];
+      if (peer && candidate) {
+        try {
+          peer.signal({ candidate });
+        } catch (error) {
+          console.error('Error adding ICE candidate:', error);
+        }
       }
     };
 
@@ -313,7 +351,7 @@ export const useWebRTC = (roomId) => {
     };
 
     const handleRoomUsers = (roomUsers) => {
-      console.log('Room users updated:', roomUsers);
+      console.log('👥 Room users updated:', roomUsers);
       if (!Array.isArray(roomUsers)) {
         console.warn('Invalid room users data');
         return;
@@ -323,18 +361,22 @@ export const useWebRTC = (roomId) => {
       
       // Connect to existing users if we have a local stream
       if (localStreamRef.current && socket.current) {
+        console.log(`🔗 Attempting to connect to ${roomUsers.length} users`);
         roomUsers.forEach(user => {
           // Don't connect to yourself
           if (user && user.id && user.id !== socket.current.id && !peersRef.current[user.id]) {
-            console.log('Creating peer connection to:', user.id);
+            console.log('🎯 Creating peer connection to:', user.id, user.name);
             createPeer(user.id, true, localStreamRef.current);
           }
         });
+      } else {
+        console.log('⏳ Waiting for local stream before connecting to peers');
       }
     };
 
     socket.current.on('incoming-call', handleIncomingCall);
     socket.current.on('call-answered', handleCallAnswered);
+    socket.current.on('ice-candidate', handleIceCandidate);
     socket.current.on('userLeft', handleUserLeft);
     socket.current.on('call-ended', handleCallEnded);
     socket.current.on('roomUsers', handleRoomUsers);
@@ -343,6 +385,7 @@ export const useWebRTC = (roomId) => {
       if (socket.current) {
         socket.current.off('incoming-call', handleIncomingCall);
         socket.current.off('call-answered', handleCallAnswered);
+        socket.current.off('ice-candidate', handleIceCandidate);
         socket.current.off('userLeft', handleUserLeft);
         socket.current.off('call-ended', handleCallEnded);
         socket.current.off('roomUsers', handleRoomUsers);
@@ -356,10 +399,10 @@ export const useWebRTC = (roomId) => {
       return;
     }
 
-    console.log('Local stream available, connecting to users:', users);
+    console.log('🎥 Local stream available, connecting to users:', users);
     users.forEach(user => {
       if (user && user.id && user.id !== socket.current?.id && !peersRef.current[user.id]) {
-        console.log('Creating delayed peer connection to:', user.id);
+        console.log('🔌 Creating delayed peer connection to:', user.id, user.name);
         createPeer(user.id, true, localStream);
       }
     });

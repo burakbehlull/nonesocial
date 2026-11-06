@@ -54,10 +54,16 @@ export default (io, socket) => {
     };
 
     socket.join(roomId);
+    
+    // First send callback with room info
     callback({ success: true, room });
 
-    // Notify others about updated user list
-    io.to(roomId).emit('roomUsers', getUsers(roomId));
+    // CRITICAL: Emit roomUsers to ALL users including the one who just joined
+    // This ensures everyone knows about each other for WebRTC connections
+    const users = getUsers(roomId);
+    io.to(roomId).emit('roomUsers', users);
+    
+    console.log(`📢 User ${socket.id} joined room ${roomId}. Total users:`, users.length);
   });
 
   // Get room info
@@ -170,8 +176,13 @@ export default (io, socket) => {
   // Call user (initiate connection)
   socket.on('call-user', ({ roomId, to, signal }) => {
     const room = rooms[roomId];
-    if (!room) return;
+    if (!room) {
+      console.error(`❌ call-user: Room ${roomId} not found`);
+      return;
+    }
 
+    console.log(`📞 call-user: ${socket.id} → ${to} in room ${roomId}`);
+    
     // Forward signal to target user
     io.to(to).emit('incoming-call', {
       from: socket.id,
@@ -182,14 +193,30 @@ export default (io, socket) => {
 
   // Answer call (respond to connection)
   socket.on('answer-call', ({ to, signal }) => {
+    console.log(`📞 answer-call: ${socket.id} → ${to}`);
+    
     io.to(to).emit('call-answered', {
       from: socket.id,
       signal
     });
   });
 
+  // ICE candidate exchange (critical for NAT traversal!)
+  socket.on('ice-candidate', ({ roomId, to, candidate }) => {
+    console.log(`🧊 ICE candidate: ${socket.id} → ${to}`);
+    
+    if (to) {
+      io.to(to).emit('ice-candidate', {
+        from: socket.id,
+        candidate
+      });
+    }
+  });
+
   // End call
   socket.on('end-call', ({ roomId }) => {
+    console.log(`📴 end-call: ${socket.id} in room ${roomId}`);
+    
     socket.to(roomId).emit('call-ended', {
       from: socket.id
     });
@@ -197,6 +224,8 @@ export default (io, socket) => {
 
   // Toggle audio status
   socket.on('toggle-audio', ({ roomId, enabled }) => {
+    console.log(`🎤 ${socket.id} audio: ${enabled}`);
+    
     socket.to(roomId).emit('user-audio-toggled', {
       userId: socket.id,
       enabled
@@ -205,6 +234,8 @@ export default (io, socket) => {
 
   // Toggle video status
   socket.on('toggle-video', ({ roomId, enabled }) => {
+    console.log(`📹 ${socket.id} video: ${enabled}`);
+    
     socket.to(roomId).emit('user-video-toggled', {
       userId: socket.id,
       enabled
