@@ -6,6 +6,7 @@ import { useWebRTC } from '@hooks/useWebRTC';
 import { useRoomStore } from '@store/roomStore';
 import { useTheme } from '@contexts/ThemeContext';
 import VideoGrid from '@components/VideoGrid';
+import UserBubbles from '@components/UserBubbles';
 import { Card } from '@components/ui/card';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
@@ -338,27 +339,35 @@ export default function Room() {
       {/* Main Content - 3 Column Layout */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* LEFT - Video Grid (Küçük) */}
+        {/* LEFT - Video Grid + User Bubbles */}
         <div className="w-80 border-r bg-card flex flex-col">
-          <div className="flex-1 p-3 overflow-auto">
-            {isInCall ? (
-              <VideoGrid
-                localStream={localStream}
-                peers={peers}
+          {/* User Bubbles */}
+          <div className="border-b">
+            <div className="p-3">
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <FiUsers className="w-4 h-4" />
+                Üyeler ({users.length})
+              </h3>
+              <UserBubbles
                 users={users}
                 currentUserId={currentUserId}
+                localStream={localStream}
                 audioEnabled={audioEnabled}
-                videoEnabled={videoEnabled}
+                peers={peers}
               />
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <div className="text-center text-muted-foreground p-4">
-                  <FiVideo className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">Çağrıya katılmadınız</p>
-                  <p className="text-xs mt-1">Katılmak için üstteki butona tıklayın</p>
-                </div>
-              </div>
-            )}
+            </div>
+          </div>
+
+          {/* Video Grid */}
+          <div className="flex-1 overflow-auto">
+            <VideoGrid
+              localStream={localStream}
+              peers={peers}
+              users={users}
+              currentUserId={currentUserId}
+              audioEnabled={audioEnabled}
+              videoEnabled={videoEnabled}
+            />
           </div>
         </div>
 

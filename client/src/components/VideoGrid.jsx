@@ -95,7 +95,6 @@ const VideoGrid = ({ localStream, peers, users, currentUserId, audioEnabled, vid
     if (totalVideos === 1) return 'grid-cols-1';
     if (totalVideos === 2) return 'grid-cols-2';
     if (totalVideos <= 4) return 'grid-cols-2';
-    if (totalVideos <= 6) return 'grid-cols-3';
     return 'grid-cols-3';
   };
 
@@ -109,21 +108,21 @@ const VideoGrid = ({ localStream, peers, users, currentUserId, audioEnabled, vid
     return user?.role === 'owner';
   };
 
-  // Hiç video yoksa boş mesaj göster
+  // Hiç video yoksa boş mesaj
   if (totalVideos === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center text-muted-foreground">
+      <div className="flex items-center justify-center h-full bg-muted/20 rounded-lg m-2">
+        <div className="text-center text-muted-foreground p-8">
           <FiPhoneOff className="w-16 h-16 mx-auto mb-4 opacity-50" />
           <p className="text-lg font-medium">Henüz kimse seste değil</p>
-          <p className="text-sm mt-2">Aramaya katılmak için "Çağrıya Katıl" butonuna tıklayın</p>
+          <p className="text-sm mt-2 opacity-75">Aramaya katılmak için "Çağrıya Katıl" butonuna tıklayın</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={cn("grid gap-4 h-full p-4", getGridClass())}>
+    <div className={cn("grid gap-3 h-full p-2", getGridClass())}>
       {activeVideos.map(({ stream, userId, isSelf, audioEnabled, videoEnabled }) => (
         <VideoTile
           key={userId}
