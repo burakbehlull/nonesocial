@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { getSocket } from '@services/socket';
 
-// Basit STUN config - direkt P2P bağlantı için
+// Basit ICE config - direkt P2P için
 const ICE_SERVERS = {
   iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' }
+    { urls: 'stun:stun.l.google.com:19302' },
+    { 
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    }
   ]
 };
 
@@ -19,17 +24,27 @@ export const useWebRTC = (roomId) => {
   const socket = useRef(null);
   const localStreamRef = useRef(null);
 
-  // Mikrofon/kamera aç
+  // Mikrofon/kamera aç - HER ZAMAN video track al
   const initializeMedia = useCallback(async (includeVideo = false) => {
     try {
-      console.log('🎤 Media izni isteniyor...');
+      console.log('🎤 Media izni isteniyor... (video:', includeVideo, ')');
       
+      // HER ZAMAN hem audio hem video al
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: includeVideo
+        video: true
       });
       
+      // Video'yu kullanıcı istemediyse kapat
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = includeVideo;
+      }
+      
       console.log('✅ Media erişimi verildi');
+      console.log('  📊 Audio tracks:', stream.getAudioTracks().length);
+      console.log('  📊 Video tracks:', stream.getVideoTracks().length);
+      
       localStreamRef.current = stream;
       setLocalStream(stream);
       setAudioEnabled(true);
@@ -37,43 +52,47 @@ export const useWebRTC = (roomId) => {
       
       return stream;
     } catch (error) {
-      console.error('❌ Media hatası:', error);
+      console.error('❌ Media hatası:', error.name, error.message);
       throw error;
     }
   }, []);
 
-  // Peer bağlantısı oluştur (direkt kullanıcılar arası)
+  // Peer connection oluştur
   const createPeerConnection = useCallback((userId) => {
-    console.log('🔗 Peer bağlantısı oluşturuluyor:', userId);
+    console.log('🔗 Peer connection oluşturuluyor:', userId);
 
     if (peerConnections.current[userId]) {
-      console.log('⚠️ Zaten var:', userId);
+      console.log('⚠️ Peer zaten var:', userId);
       return peerConnections.current[userId];
     }
 
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    // Local stream'i ekle (mikrofon/kamera)
+    // Local tracks ekle
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
         pc.addTrack(track, localStreamRef.current);
-        console.log('➕ Track eklendi:', track.kind);
+        console.log('  ➕ Track eklendi:', track.kind, 'enabled:', track.enabled);
       });
     }
 
-    // Karşı taraftan gelen stream'i yakala
+    // Remote track geldiğinde
     pc.ontrack = (event) => {
-      console.log('📺 Stream geldi:', userId);
+      console.log('📺 Remote track alındı:', event.track.kind, 'from:', userId);
+      
       setPeers(prev => ({
         ...prev,
-        [userId]: { pc, stream: event.streams[0] }
+        [userId]: { 
+          pc, 
+          stream: event.streams[0]
+        }
       }));
     };
 
-    // ICE candidate (NAT geçiş bilgisi) - Socket.io ile gönder
+    // ICE candidate
     pc.onicecandidate = (event) => {
       if (event.candidate && socket.current) {
-        console.log('🧊 ICE gönderiliyor:', userId);
+        console.log('🧊 ICE candidate gönderiliyor:', userId);
         socket.current.emit('ice-candidate', {
           to: userId,
           candidate: event.candidate,
@@ -82,19 +101,29 @@ export const useWebRTC = (roomId) => {
       }
     };
 
-    // Bağlantı durumu
+    // Connection durumu
     pc.onconnectionstatechange = () => {
-      console.log(`🔌 ${userId} durumu:`, pc.connectionState);
-      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+      const state = pc.connectionState;
+      console.log(`🔌 Connection state [${userId}]:`, state);
+      
+      if (state === 'connected') {
+        console.log('✅ Bağlantı kuruldu:', userId);
+      } else if (state === 'failed' || state === 'disconnected') {
+        console.log('❌ Bağlantı kesildi:', userId);
         removePeerConnection(userId);
       }
+    };
+
+    // ICE connection durumu
+    pc.oniceconnectionstatechange = () => {
+      console.log(`🧊 ICE state [${userId}]:`, pc.iceConnectionState);
     };
 
     peerConnections.current[userId] = pc;
     return pc;
   }, [roomId]);
 
-  // Peer bağlantısını kapat
+  // Peer connection kapat
   const removePeerConnection = useCallback((userId) => {
     console.log('🗑️ Peer kapatılıyor:', userId);
     
@@ -110,7 +139,7 @@ export const useWebRTC = (roomId) => {
     });
   }, []);
 
-  // Mikrofonu aç/kapat
+  // Mikrofon toggle
   const toggleAudio = useCallback(() => {
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
@@ -122,37 +151,14 @@ export const useWebRTC = (roomId) => {
     }
   }, []);
 
-  // Kamerayı aç/kapat
-  const toggleVideo = useCallback(async () => {
-    if (!localStreamRef.current) return;
-
-    const videoTrack = localStreamRef.current.getVideoTracks()[0];
-    
-    if (videoTrack) {
-      videoTrack.enabled = !videoTrack.enabled;
-      setVideoEnabled(videoTrack.enabled);
-      console.log('📹', videoTrack.enabled ? 'AÇIK' : 'KAPALI');
-    } else {
-      try {
-        console.log('📹 Kamera izni isteniyor...');
-        const videoStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false
-        });
-        
-        const newVideoTrack = videoStream.getVideoTracks()[0];
-        localStreamRef.current.addTrack(newVideoTrack);
-        
-        // Tüm peer'lara yeni video track'i gönder
-        Object.values(peerConnections.current).forEach(pc => {
-          pc.addTrack(newVideoTrack, localStreamRef.current);
-        });
-        
-        setLocalStream(localStreamRef.current);
-        setVideoEnabled(true);
-        console.log('✅ Kamera açıldı');
-      } catch (error) {
-        console.error('❌ Kamera hatası:', error);
+  // Kamera toggle
+  const toggleVideo = useCallback(() => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setVideoEnabled(videoTrack.enabled);
+        console.log('📹', videoTrack.enabled ? 'AÇIK' : 'KAPALI');
       }
     }
   }, []);
@@ -161,45 +167,56 @@ export const useWebRTC = (roomId) => {
   const endCall = useCallback(() => {
     console.log('📴 Arama sonlandırılıyor...');
     
-    // Mikrofon/kamerayı kapat
+    // Tracks kapat
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log('  ⏹️ Track durduruldu:', track.kind);
+      });
       localStreamRef.current = null;
       setLocalStream(null);
     }
 
-    // Tüm peer bağlantılarını kapat
+    // Peer connections kapat
     Object.keys(peerConnections.current).forEach(userId => {
       peerConnections.current[userId].close();
     });
     
     peerConnections.current = {};
     setPeers({});
+    setAudioEnabled(false);
+    setVideoEnabled(false);
 
-    // Sunucuya bildir
-    if (socket.current) {
+    // Backend'e bildir
+    if (socket.current && roomId) {
       socket.current.emit('end-call', { roomId });
     }
   }, [roomId]);
 
-  // Socket.io ile signaling (sadece tanışma için)
+  // WebRTC signaling setup
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId) {
+      console.error('❌ roomId gerekli!');
+      return;
+    }
 
     socket.current = getSocket();
-    console.log('📡 Socket bağlandı');
+    console.log('📡 Socket bağlandı, room:', roomId);
 
-    // Yeni kullanıcı listeyi aldığında
-    socket.current.on('roomUsers', (roomUsers) => {
-      console.log('👥 Kullanıcılar:', roomUsers.length);
+    // Room users güncellemesi
+    const handleRoomUsers = (roomUsers) => {
+      console.log('👥 Room users:', roomUsers.length, 'kullanıcı');
       setUsers(roomUsers);
       
-      // Local stream varsa, yeni kullanıcılara bağlan
-      if (localStreamRef.current) {
+      // Local stream varsa yeni kullanıcılara bağlan
+      if (localStreamRef.current && socket.current) {
         roomUsers.forEach(user => {
           if (user.id !== socket.current.id && !peerConnections.current[user.id]) {
-            // Offer gönder (bağlantı başlat)
+            console.log('🎯 Bağlanılıyor:', user.name, '(' + user.id + ')');
+            
             const pc = createPeerConnection(user.id);
+            
+            // Offer oluştur
             pc.createOffer()
               .then(offer => pc.setLocalDescription(offer))
               .then(() => {
@@ -209,82 +226,131 @@ export const useWebRTC = (roomId) => {
                   offer: pc.localDescription,
                   roomId
                 });
-              });
+              })
+              .catch(err => console.error('❌ Offer hatası:', err));
           }
         });
       }
-    });
+    };
 
-    // Offer geldi (biri bağlanmak istiyor)
-    socket.current.on('webrtc-offer', async ({ from, offer }) => {
+    // Offer geldi
+    const handleOffer = async ({ from, offer }) => {
       console.log('📥 Offer geldi:', from);
       
-      if (!localStreamRef.current) return;
+      if (!localStreamRef.current) {
+        console.warn('⚠️ Local stream yok, offer ignore ediliyor');
+        return;
+      }
 
-      const pc = createPeerConnection(from);
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      
-      console.log('📤 Answer gönderiliyor:', from);
-      socket.current.emit('webrtc-answer', {
-        to: from,
-        answer: pc.localDescription
-      });
-    });
+      try {
+        let pc = peerConnections.current[from];
+        
+        if (!pc) {
+          console.log('🆕 Yeni peer oluşturuluyor');
+          pc = createPeerConnection(from);
+        } else {
+          console.log('🔄 Mevcut peer için renegotiation');
+        }
+        
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        console.log('  ✅ Remote description set');
+        
+        const answer = await pc.createAnswer();
+        console.log('  ✅ Answer oluşturuldu');
+        
+        await pc.setLocalDescription(answer);
+        console.log('  ✅ Local description set');
+        
+        console.log('📤 Answer gönderiliyor:', from);
+        socket.current.emit('webrtc-answer', {
+          to: from,
+          answer: pc.localDescription
+        });
+      } catch (error) {
+        console.error('❌ Offer handle hatası:', error);
+      }
+    };
 
-    // Answer geldi (karşı taraf kabul etti)
-    socket.current.on('webrtc-answer', async ({ from, answer }) => {
+    // Answer geldi
+    const handleAnswer = async ({ from, answer }) => {
       console.log('📥 Answer geldi:', from);
       
       const pc = peerConnections.current[from];
-      if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        console.log('✅ Bağlantı kuruldu:', from);
+      if (!pc) {
+        console.warn('⚠️ Peer bulunamadı:', from);
+        return;
       }
-    });
 
-    // ICE candidate geldi (NAT geçiş bilgisi)
-    socket.current.on('ice-candidate', async ({ from, candidate }) => {
-      console.log('🧊 ICE geldi:', from);
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log('✅ Remote description set:', from);
+      } catch (error) {
+        console.error('❌ Answer handle hatası:', error);
+      }
+    };
+
+    // ICE candidate geldi
+    const handleIceCandidate = async ({ from, candidate }) => {
+      console.log('🧊 ICE candidate geldi:', from);
       
       const pc = peerConnections.current[from];
-      if (pc) {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      if (!pc) {
+        console.warn('⚠️ Peer bulunamadı:', from);
+        return;
       }
-    });
 
-    // Kullanıcı ayrıldı
-    socket.current.on('userLeft', ({ userId }) => {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log('  ✅ ICE candidate eklendi');
+      } catch (error) {
+        console.error('❌ ICE candidate hatası:', error);
+      }
+    };
+
+    // User left
+    const handleUserLeft = ({ userId }) => {
       console.log('👋 Kullanıcı ayrıldı:', userId);
       removePeerConnection(userId);
-    });
+    };
 
-    socket.current.on('call-ended', ({ from }) => {
+    // Call ended
+    const handleCallEnded = ({ from }) => {
       console.log('📴 Arama bitti:', from);
       removePeerConnection(from);
-    });
+    };
+
+    // Event listeners
+    socket.current.on('roomUsers', handleRoomUsers);
+    socket.current.on('webrtc-offer', handleOffer);
+    socket.current.on('webrtc-answer', handleAnswer);
+    socket.current.on('ice-candidate', handleIceCandidate);
+    socket.current.on('userLeft', handleUserLeft);
+    socket.current.on('call-ended', handleCallEnded);
 
     return () => {
-      socket.current?.off('roomUsers');
-      socket.current?.off('webrtc-offer');
-      socket.current?.off('webrtc-answer');
-      socket.current?.off('ice-candidate');
-      socket.current?.off('userLeft');
-      socket.current?.off('call-ended');
+      if (socket.current) {
+        socket.current.off('roomUsers', handleRoomUsers);
+        socket.current.off('webrtc-offer', handleOffer);
+        socket.current.off('webrtc-answer', handleAnswer);
+        socket.current.off('ice-candidate', handleIceCandidate);
+        socket.current.off('userLeft', handleUserLeft);
+        socket.current.off('call-ended', handleCallEnded);
+      }
     };
   }, [roomId, createPeerConnection, removePeerConnection]);
 
-  // Local stream hazır olduğunda mevcut kullanıcılara bağlan
+  // Local stream hazır olunca mevcut kullanıcılara bağlan
   useEffect(() => {
     if (!localStream || !socket.current || users.length === 0) return;
 
-    console.log('🎥 Stream hazır, bağlanılıyor:', users.length);
+    console.log('🎥 Local stream hazır, bağlanılıyor...');
     
     users.forEach(user => {
       if (user.id !== socket.current.id && !peerConnections.current[user.id]) {
+        console.log('🔌 Auto-connect:', user.name);
+        
         const pc = createPeerConnection(user.id);
+        
         pc.createOffer()
           .then(offer => pc.setLocalDescription(offer))
           .then(() => {
@@ -293,7 +359,8 @@ export const useWebRTC = (roomId) => {
               offer: pc.localDescription,
               roomId
             });
-          });
+          })
+          .catch(err => console.error('❌ Auto-connect hatası:', err));
       }
     });
   }, [localStream, users, createPeerConnection, roomId]);
