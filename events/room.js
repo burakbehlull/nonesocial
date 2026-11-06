@@ -1,212 +1,653 @@
 import { nanoid } from 'nanoid';
+import bcrypt from 'bcrypt';
+import logger from '../utils/logger.js';
+import { 
+  sanitizeRoomName, 
+  sanitizeUsername, 
+  sanitizeMessage,
+  validatePassword 
+} from '../utils/sanitizer.js';
+import {
+  messageLimiter,
+  createRoomLimiter,
+  joinRoomLimiter,
+  changeNameLimiter,
+  webrtcLimiter
+} from '../utils/rateLimiter.js';
+import { schemas, validate } from '../utils/validation.js';
 
 const rooms = {};
+const userSockets = new Map(); // userId -> socket.id mapping
+const MAX_ROOMS = 1000;
+const ROOM_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
+
+// Clean expired rooms every hour
+setInterval(() => {
+  const now = Date.now();
+  let cleanedCount = 0;
+  
+  for (const [roomId, room] of Object.entries(rooms)) {
+    if (room.expiresAt < now) {
+      // Notify users
+      const io = global.io;
+      if (io) {
+        io.to(roomId).emit('roomClosed', { reason: 'Room expired after 24 hours' });
+      }
+      delete rooms[roomId];
+      cleanedCount++;
+    }
+  }
+  
+  if (cleanedCount > 0) {
+    logger.info({
+      type: 'ROOM_CLEANUP',
+      cleanedCount,
+      remainingRooms: Object.keys(rooms).length
+    });
+  }
+}, 60 * 60 * 1000); // Every hour
 
 export default (io, socket) => {
+  // Store io globally for cleanup
+  if (!global.io) {
+    global.io = io;
+  }
+  
+  // Store user socket mapping
+  userSockets.set(socket.userId, socket.id);
+  
+  logger.info({
+    type: 'USER_SOCKET_CONNECTED',
+    userId: socket.userId,
+    socketId: socket.id,
+    ip: socket.handshake.address
+  });
   // Create a new room
-  socket.on('createRoom', ({ name, password, limit, videoEnabled }, callback) => {
-    const roomId = nanoid(8);
-    rooms[roomId] = {
-      name: name || 'Unnamed Room',
-      password: password || null,
-      limit: limit || 10,
-      videoEnabled: videoEnabled !== false,
-      ownerId: socket.id,
-      members: {},
-      banned: [],
-      createdAt: new Date().toISOString()
-    };
+  socket.on('createRoom', async ({ name, password, limit, videoEnabled }, callback) => {
+    try {
+      // Rate limiting
+      await createRoomLimiter.consume(socket.userId);
 
-    rooms[roomId].members[socket.id] = {
-      name: 'Guest',
-      joinedAt: new Date().toISOString()
-    };
+      // Validation
+      const validation = validate(schemas.createRoom, { name, password, limit, videoEnabled });
+      if (!validation.valid) {
+        logger.warn({
+          type: 'VALIDATION_FAILED',
+          event: 'createRoom',
+          userId: socket.userId,
+          errors: validation.errors
+        });
+        return callback?.({ success: false, message: validation.errors });
+      }
 
-    socket.join(roomId);
-    io.to(roomId).emit('roomUsers', getUsers(roomId));
+      const data = validation.value;
 
-    callback({ success: true, roomId, room: rooms[roomId] });
+      // Room limit check
+      if (Object.keys(rooms).length >= MAX_ROOMS) {
+        logger.warn({
+          type: 'ROOM_LIMIT_REACHED',
+          userId: socket.userId,
+          currentRooms: Object.keys(rooms).length
+        });
+        return callback?.({ success: false, message: 'Server is full, try again later' });
+      }
+
+      // Sanitize and validate
+      const sanitizedName = sanitizeRoomName(data.name);
+      let hashedPassword = null;
+
+      if (data.password) {
+        try {
+          validatePassword(data.password);
+          hashedPassword = await bcrypt.hash(data.password, 10);
+        } catch (err) {
+          return callback?.({ success: false, message: err.message });
+        }
+      }
+
+      const roomId = nanoid(8);
+      rooms[roomId] = {
+        name: sanitizedName,
+        passwordHash: hashedPassword,
+        limit: Math.min(data.limit, 50),
+        videoEnabled: data.videoEnabled,
+        ownerId: socket.userId, // Use userId instead of socket.id
+        members: {},
+        banned: [], // Will store userId instead of socket.id
+        createdAt: Date.now(),
+        expiresAt: Date.now() + ROOM_TIMEOUT
+      };
+
+      rooms[roomId].members[socket.userId] = {
+        name: 'Guest',
+        socketId: socket.id,
+        joinedAt: Date.now()
+      };
+
+      socket.join(roomId);
+      
+      logger.info({
+        type: 'ROOM_CREATED',
+        roomId,
+        userId: socket.userId,
+        name: sanitizedName,
+        hasPassword: !!hashedPassword
+      });
+
+      io.to(roomId).emit('roomUsers', getUsers(roomId));
+
+      callback?.({ 
+        success: true, 
+        roomId, 
+        room: {
+          name: rooms[roomId].name,
+          limit: rooms[roomId].limit,
+          videoEnabled: rooms[roomId].videoEnabled,
+          passwordProtected: !!hashedPassword
+        }
+      });
+    } catch (error) {
+      logger.error({
+        type: 'CREATE_ROOM_ERROR',
+        userId: socket.userId,
+        error: error.message
+      });
+      callback?.({ success: false, message: error.message });
+    }
   });
 
   // Join existing room
-  socket.on('joinRoom', ({ roomId, password }, callback) => {
-    const room = rooms[roomId];
-    
-    if (!room) {
-      return callback({ success: false, message: 'Room not found' });
+  socket.on('joinRoom', async ({ roomId, password }, callback) => {
+    try {
+      // Rate limiting
+      await joinRoomLimiter.consume(socket.userId);
+
+      // Validation
+      const validation = validate(schemas.joinRoom, { roomId, password });
+      if (!validation.valid) {
+        return callback?.({ success: false, message: validation.errors });
+      }
+
+      const room = rooms[roomId];
+      
+      if (!room) {
+        logger.warn({
+          type: 'ROOM_NOT_FOUND',
+          roomId,
+          userId: socket.userId
+        });
+        return callback?.({ success: false, message: 'Room not found' });
+      }
+
+      // Check if user is banned (by userId, not socket.id)
+      if (room.banned.includes(socket.userId)) {
+        logger.warn({
+          type: 'BANNED_USER_ATTEMPTED_JOIN',
+          roomId,
+          userId: socket.userId
+        });
+        return callback?.({ success: false, message: 'You are banned from this room' });
+      }
+
+      // Password check (bcrypt compare)
+      if (room.passwordHash) {
+        const isPasswordValid = await bcrypt.compare(password || '', room.passwordHash);
+        if (!isPasswordValid) {
+          logger.warn({
+            type: 'INCORRECT_PASSWORD',
+            roomId,
+            userId: socket.userId
+          });
+          return callback?.({ success: false, message: 'Incorrect password' });
+        }
+      }
+
+      // Room capacity check
+      if (Object.keys(room.members).length >= room.limit) {
+        logger.warn({
+          type: 'ROOM_FULL',
+          roomId,
+          userId: socket.userId,
+          currentMembers: Object.keys(room.members).length
+        });
+        return callback?.({ success: false, message: 'Room is full' });
+      }
+
+      // Check if user already in room (reconnection)
+      const existingMember = room.members[socket.userId];
+      if (existingMember) {
+        // Update socket ID for reconnection
+        existingMember.socketId = socket.id;
+      } else {
+        room.members[socket.userId] = {
+          name: 'Guest',
+          socketId: socket.id,
+          joinedAt: Date.now()
+        };
+      }
+
+      socket.join(roomId);
+      
+      logger.info({
+        type: 'USER_JOINED_ROOM',
+        roomId,
+        userId: socket.userId,
+        memberCount: Object.keys(room.members).length
+      });
+
+      // First send callback with room info
+      callback?.({ 
+        success: true, 
+        room: {
+          name: room.name,
+          limit: room.limit,
+          videoEnabled: room.videoEnabled,
+          passwordProtected: !!room.passwordHash
+        }
+      });
+
+      // Emit roomUsers to ALL users including the one who just joined
+      const users = getUsers(roomId);
+      io.to(roomId).emit('roomUsers', users);
+      
+    } catch (error) {
+      logger.error({
+        type: 'JOIN_ROOM_ERROR',
+        roomId,
+        userId: socket.userId,
+        error: error.message
+      });
+      callback?.({ success: false, message: error.message });
     }
-
-    if (room.banned.includes(socket.id)) {
-      return callback({ success: false, message: 'You are banned from this room' });
-    }
-
-    if (room.password && room.password !== password) {
-      return callback({ success: false, message: 'Incorrect password' });
-    }
-
-    if (Object.keys(room.members).length >= room.limit) {
-      return callback({ success: false, message: 'Room is full' });
-    }
-
-    room.members[socket.id] = {
-      name: 'Guest',
-      joinedAt: new Date().toISOString()
-    };
-
-    socket.join(roomId);
-    
-    // First send callback with room info
-    callback({ success: true, room });
-
-    // CRITICAL: Emit roomUsers to ALL users including the one who just joined
-    // This ensures everyone knows about each other for WebRTC connections
-    const users = getUsers(roomId);
-    io.to(roomId).emit('roomUsers', users);
-    
-    console.log(`📢 User ${socket.id} joined room ${roomId}. Total users:`, users.length);
   });
 
   // Get room info
   socket.on('getRoomInfo', ({ roomId }, callback) => {
     const room = rooms[roomId];
     if (!room) {
-      return callback({ success: false, message: 'Room not found' });
+      return callback?.({ success: false, message: 'Room not found' });
     }
 
-    const isOwner = socket.id === room.ownerId;
-    callback({
+    const isOwner = socket.userId === room.ownerId;
+    callback?.({
       success: true,
       isOwner,
       name: room.name,
       limit: room.limit,
       videoEnabled: room.videoEnabled,
-      passwordProtected: !!room.password,
+      passwordProtected: !!room.passwordHash,
       users: getUsers(roomId),
       memberCount: Object.keys(room.members).length
     });
   });
 
   // Change user name
-  socket.on('changeName', ({ roomId, newName }, callback) => {
-    const room = rooms[roomId];
-    if (!room || !room.members[socket.id]) {
-      return callback?.({ success: false, message: 'Not in room' });
-    }
+  socket.on('changeName', async ({ roomId, newName }, callback) => {
+    try {
+      // Rate limiting
+      await changeNameLimiter.consume(socket.userId);
 
-    if (!newName || newName.trim().length === 0) {
-      return callback?.({ success: false, message: 'Name cannot be empty' });
-    }
+      // Validation
+      const validation = validate(schemas.changeName, { roomId, newName });
+      if (!validation.valid) {
+        return callback?.({ success: false, message: validation.errors });
+      }
 
-    if (newName.length > 20) {
-      return callback?.({ success: false, message: 'Name too long (max 20)' });
-    }
+      const room = rooms[roomId];
+      if (!room || !room.members[socket.userId]) {
+        return callback?.({ success: false, message: 'Not in room' });
+      }
 
-    room.members[socket.id].name = newName.trim();
-    io.to(roomId).emit('roomUsers', getUsers(roomId));
-    
-    callback?.({ success: true });
+      const sanitized = sanitizeUsername(newName);
+      
+      if (sanitized.length === 0) {
+        return callback?.({ success: false, message: 'Name cannot be empty' });
+      }
+
+      room.members[socket.userId].name = sanitized;
+      
+      logger.info({
+        type: 'NAME_CHANGED',
+        roomId,
+        userId: socket.userId,
+        newName: sanitized
+      });
+
+      io.to(roomId).emit('roomUsers', getUsers(roomId));
+      
+      callback?.({ success: true });
+    } catch (error) {
+      logger.error({
+        type: 'CHANGE_NAME_ERROR',
+        userId: socket.userId,
+        error: error.message
+      });
+      callback?.({ success: false, message: error.message });
+    }
   });
 
   // Send message
-  socket.on('sendMessage', ({ roomId, message }, callback) => {
-    const room = rooms[roomId];
-    if (!room || !room.members[socket.id]) {
-      return callback?.({ success: false, message: 'Not in room' });
+  socket.on('sendMessage', async ({ roomId, message }, callback) => {
+    try {
+      // Rate limiting
+      await messageLimiter.consume(socket.userId);
+
+      // Validation
+      const validation = validate(schemas.sendMessage, { roomId, message });
+      if (!validation.valid) {
+        return callback?.({ success: false, message: validation.errors });
+      }
+
+      const room = rooms[roomId];
+      if (!room || !room.members[socket.userId]) {
+        return callback?.({ success: false, message: 'Not in room' });
+      }
+
+      const member = room.members[socket.userId];
+      const sanitized = sanitizeMessage(message);
+
+      if (sanitized.length === 0) {
+        return callback?.({ success: false, message: 'Message cannot be empty' });
+      }
+
+      const msg = {
+        id: nanoid(6),
+        from: socket.userId,
+        name: member.name,
+        content: sanitized,
+        role: room.ownerId === socket.userId ? 'owner' : 'member',
+        timestamp: new Date().toISOString()
+      };
+
+      logger.info({
+        type: 'MESSAGE_SENT',
+        roomId,
+        userId: socket.userId,
+        messageLength: sanitized.length
+      });
+
+      io.to(roomId).emit('receiveMessage', msg);
+      callback?.({ success: true });
+    } catch (error) {
+      logger.error({
+        type: 'SEND_MESSAGE_ERROR',
+        userId: socket.userId,
+        error: error.message
+      });
+      callback?.({ success: false, message: error.message });
     }
-
-    const member = room.members[socket.id];
-    const msg = {
-      id: nanoid(6),
-      from: socket.id,
-      name: member.name,
-      content: message,
-      role: room.ownerId === socket.id ? 'owner' : 'member',
-      timestamp: new Date().toISOString()
-    };
-
-    io.to(roomId).emit('receiveMessage', msg);
-    callback?.({ success: true });
   });
 
   // Kick user (owner only)
-  socket.on('kickUser', ({ roomId, targetSocketId }, callback) => {
-    const room = rooms[roomId];
-    if (!room) return callback?.({ success: false, message: 'Room not found' });
-    
-    if (room.ownerId !== socket.id) {
-      return callback?.({ success: false, message: 'Not authorized' });
+  socket.on('kickUser', ({ roomId, targetUserId }, callback) => {
+    try {
+      // Validation
+      const validation = validate(schemas.kickUser, { roomId, targetUserId });
+      if (!validation.valid) {
+        return callback?.({ success: false, message: validation.errors });
+      }
+
+      const room = rooms[roomId];
+      if (!room) {
+        return callback?.({ success: false, message: 'Room not found' });
+      }
+      
+      if (room.ownerId !== socket.userId) {
+        logger.warn({
+          type: 'UNAUTHORIZED_KICK',
+          roomId,
+          userId: socket.userId,
+          targetUserId
+        });
+        return callback?.({ success: false, message: 'Not authorized' });
+      }
+
+      const target = room.members[targetUserId];
+      if (!target) {
+        return callback?.({ success: false, message: 'User not found' });
+      }
+
+      // Ban by userId (persistent across reconnections)
+      room.banned.push(targetUserId);
+      delete room.members[targetUserId];
+
+      // Find target's current socket
+      const targetSocketId = userSockets.get(targetUserId);
+      if (targetSocketId) {
+        const targetSocket = io.sockets.sockets.get(targetSocketId);
+        if (targetSocket) {
+          targetSocket.leave(roomId);
+          targetSocket.emit('kicked', { roomId, reason: 'Kicked by room owner' });
+        }
+      }
+
+      logger.info({
+        type: 'USER_KICKED',
+        roomId,
+        ownerId: socket.userId,
+        targetUserId
+      });
+
+      io.to(roomId).emit('roomUsers', getUsers(roomId));
+      callback?.({ success: true });
+    } catch (error) {
+      logger.error({
+        type: 'KICK_USER_ERROR',
+        userId: socket.userId,
+        error: error.message
+      });
+      callback?.({ success: false, message: 'Failed to kick user' });
     }
-
-    const target = room.members[targetSocketId];
-    if (!target) return callback?.({ success: false, message: 'User not found' });
-
-    room.banned.push(targetSocketId);
-    delete room.members[targetSocketId];
-
-    const targetSocket = io.sockets.sockets.get(targetSocketId);
-    if (targetSocket) {
-      targetSocket.leave(roomId);
-      targetSocket.emit('kicked', { roomId });
-    }
-
-    io.to(roomId).emit('roomUsers', getUsers(roomId));
-    callback?.({ success: true });
   });
 
   // Leave room
   socket.on('leaveRoom', ({ roomId }) => {
     const room = rooms[roomId];
-    if (room?.members[socket.id]) {
-      delete room.members[socket.id];
+    if (room?.members[socket.userId]) {
+      delete room.members[socket.userId];
       socket.leave(roomId);
       
+      logger.info({
+        type: 'USER_LEFT_ROOM',
+        roomId,
+        userId: socket.userId
+      });
+
       io.to(roomId).emit('roomUsers', getUsers(roomId));
-      socket.to(roomId).emit('userLeft', { userId: socket.id });
+      socket.to(roomId).emit('userLeft', { userId: socket.userId });
 
       // Close room if empty
       if (Object.keys(room.members).length === 0) {
-        io.to(roomId).emit('roomClosed');
+        io.to(roomId).emit('roomClosed', { reason: 'Room empty' });
         delete rooms[roomId];
+        logger.info({
+          type: 'ROOM_CLOSED',
+          roomId,
+          reason: 'empty'
+        });
       }
     }
   });
 
-  // ===== WebRTC Signaling Events (Sadece tanıştırma için) =====
-  // Video/ses backend'den GEÇMİYOR, direkt kullanıcılar arası gidiyor!
-  // Socket.io sadece kullanıcıları tanıştırıyor (signaling)
-
+  // ===== WebRTC Signaling Events with Security =====
+  
   // Offer (bağlantı teklifi)
-  socket.on('webrtc-offer', ({ to, offer, roomId }) => {
-    console.log(`📤 WebRTC Offer: ${socket.id} → ${to}`);
-    io.to(to).emit('webrtc-offer', {
-      from: socket.id,
-      offer
-    });
+  socket.on('webrtc-offer', async ({ to, offer, roomId }) => {
+    try {
+      // Rate limiting
+      await webrtcLimiter.consume(socket.userId);
+
+      // Validation
+      const validation = validate(schemas.webrtcSignaling, { to, offer, roomId });
+      if (!validation.valid) {
+        logger.warn({
+          type: 'WEBRTC_VALIDATION_FAILED',
+          event: 'offer',
+          userId: socket.userId,
+          errors: validation.errors
+        });
+        return socket.emit('error', { message: 'Invalid signaling data' });
+      }
+
+      const room = rooms[roomId];
+      
+      // Security checks
+      if (!room) {
+        return socket.emit('error', { message: 'Room not found' });
+      }
+      
+      if (!room.members[socket.userId]) {
+        logger.warn({
+          type: 'WEBRTC_UNAUTHORIZED',
+          event: 'offer',
+          userId: socket.userId,
+          roomId
+        });
+        return socket.emit('error', { message: 'Not in room' });
+      }
+      
+      if (!room.members[to]) {
+        logger.warn({
+          type: 'WEBRTC_TARGET_NOT_IN_ROOM',
+          event: 'offer',
+          from: socket.userId,
+          to,
+          roomId
+        });
+        return socket.emit('error', { message: 'Target user not in room' });
+      }
+
+      // Get target socket
+      const targetSocketId = userSockets.get(to);
+      if (!targetSocketId) {
+        return socket.emit('error', { message: 'User offline' });
+      }
+
+      logger.info({
+        type: 'WEBRTC_OFFER',
+        from: socket.userId,
+        to,
+        roomId
+      });
+
+      io.to(targetSocketId).emit('webrtc-offer', {
+        from: socket.userId,
+        offer,
+        roomId
+      });
+    } catch (error) {
+      logger.error({
+        type: 'WEBRTC_OFFER_ERROR',
+        userId: socket.userId,
+        error: error.message
+      });
+      socket.emit('error', { message: error.message });
+    }
   });
 
   // Answer (bağlantı kabulü)
-  socket.on('webrtc-answer', ({ to, answer }) => {
-    console.log(`📤 WebRTC Answer: ${socket.id} → ${to}`);
-    io.to(to).emit('webrtc-answer', {
-      from: socket.id,
-      answer
-    });
+  socket.on('webrtc-answer', async ({ to, answer, roomId }) => {
+    try {
+      // Rate limiting
+      await webrtcLimiter.consume(socket.userId);
+
+      // Validation
+      const validation = validate(schemas.webrtcSignaling, { to, answer, roomId });
+      if (!validation.valid) {
+        return socket.emit('error', { message: 'Invalid signaling data' });
+      }
+
+      const room = rooms[roomId];
+      
+      if (!room || !room.members[socket.userId] || !room.members[to]) {
+        logger.warn({
+          type: 'WEBRTC_INVALID_ANSWER',
+          from: socket.userId,
+          to,
+          roomId
+        });
+        return socket.emit('error', { message: 'Invalid signaling' });
+      }
+
+      const targetSocketId = userSockets.get(to);
+      if (!targetSocketId) {
+        return socket.emit('error', { message: 'User offline' });
+      }
+
+      logger.info({
+        type: 'WEBRTC_ANSWER',
+        from: socket.userId,
+        to,
+        roomId
+      });
+
+      io.to(targetSocketId).emit('webrtc-answer', {
+        from: socket.userId,
+        answer
+      });
+    } catch (error) {
+      logger.error({
+        type: 'WEBRTC_ANSWER_ERROR',
+        userId: socket.userId,
+        error: error.message
+      });
+      socket.emit('error', { message: error.message });
+    }
   });
 
   // ICE Candidate (NAT geçiş bilgisi)
-  socket.on('ice-candidate', ({ to, candidate, roomId }) => {
-    console.log(`🧊 ICE Candidate: ${socket.id} → ${to}`);
-    io.to(to).emit('ice-candidate', {
-      from: socket.id,
-      candidate
-    });
+  socket.on('ice-candidate', async ({ to, candidate, roomId }) => {
+    try {
+      // Rate limiting
+      await webrtcLimiter.consume(socket.userId);
+
+      // Validation
+      const validation = validate(schemas.webrtcSignaling, { to, candidate, roomId });
+      if (!validation.valid) {
+        return socket.emit('error', { message: 'Invalid signaling data' });
+      }
+
+      const room = rooms[roomId];
+      
+      if (!room || !room.members[socket.userId] || !room.members[to]) {
+        return socket.emit('error', { message: 'Invalid signaling' });
+      }
+
+      const targetSocketId = userSockets.get(to);
+      if (!targetSocketId) {
+        return socket.emit('error', { message: 'User offline' });
+      }
+
+      logger.debug({
+        type: 'WEBRTC_ICE_CANDIDATE',
+        from: socket.userId,
+        to
+      });
+
+      io.to(targetSocketId).emit('ice-candidate', {
+        from: socket.userId,
+        candidate
+      });
+    } catch (error) {
+      logger.error({
+        type: 'WEBRTC_ICE_ERROR',
+        userId: socket.userId,
+        error: error.message
+      });
+      // Don't emit error for ICE failures (too noisy)
+    }
   });
 
   // Arama bitti
   socket.on('end-call', ({ roomId }) => {
-    console.log(`📴 Call ended: ${socket.id}`);
+    logger.info({
+      type: 'CALL_ENDED',
+      userId: socket.userId,
+      roomId
+    });
+
     socket.to(roomId).emit('call-ended', {
-      from: socket.id
+      from: socket.userId
     });
   });
 
@@ -214,17 +655,43 @@ export default (io, socket) => {
 
   // Handle disconnect
   socket.on('disconnect', () => {
+    logger.info({
+      type: 'USER_DISCONNECTED',
+      userId: socket.userId,
+      socketId: socket.id
+    });
+
+    // Remove from socket mapping
+    userSockets.delete(socket.userId);
+
     for (const roomId in rooms) {
       const room = rooms[roomId];
-      if (room.members[socket.id]) {
-        delete room.members[socket.id];
-        io.to(roomId).emit('roomUsers', getUsers(roomId));
-        io.to(roomId).emit('userLeft', { userId: socket.id });
+      if (room.members[socket.userId]) {
+        // Don't delete member immediately (allow reconnection)
+        // Just mark as disconnected
+        room.members[socket.userId].disconnectedAt = Date.now();
+        
+        io.to(roomId).emit('userLeft', { userId: socket.userId });
 
-        if (Object.keys(room.members).length === 0) {
-          io.to(roomId).emit('roomClosed');
-          delete rooms[roomId];
-        }
+        // Clean up after 5 minutes of disconnection
+        setTimeout(() => {
+          const member = rooms[roomId]?.members[socket.userId];
+          if (member?.disconnectedAt && Date.now() - member.disconnectedAt > 5 * 60 * 1000) {
+            delete rooms[roomId]?.members[socket.userId];
+            
+            if (rooms[roomId] && Object.keys(rooms[roomId].members).length === 0) {
+              io.to(roomId).emit('roomClosed', { reason: 'Room empty' });
+              delete rooms[roomId];
+              logger.info({
+                type: 'ROOM_CLOSED',
+                roomId,
+                reason: 'empty_after_disconnect'
+              });
+            } else if (rooms[roomId]) {
+              io.to(roomId).emit('roomUsers', getUsers(roomId));
+            }
+          }
+        }, 5 * 60 * 1000);
       }
     }
   });
@@ -234,10 +701,12 @@ export default (io, socket) => {
     const room = rooms[roomId];
     if (!room) return [];
     
-    return Object.entries(room.members).map(([id, member]) => ({
-      id,
-      name: member.name,
-      role: id === room.ownerId ? 'owner' : 'member'
-    }));
+    return Object.entries(room.members)
+      .filter(([_, member]) => !member.disconnectedAt) // Only active users
+      .map(([userId, member]) => ({
+        id: userId,
+        name: member.name,
+        role: userId === room.ownerId ? 'owner' : 'member'
+      }));
   }
 };

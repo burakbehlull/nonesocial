@@ -2,24 +2,53 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import eventLoader from './events/eventLoader.js';
+import logger from './utils/logger.js';
+import { socketAuthMiddleware } from './utils/auth.js';
 
 dotenv.config();
 
 const app = express();
 
-// CORS configuration for production
+// Security: Helmet middleware for HTTP headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
+// Security: Strict CORS configuration
+const allowedOrigins = process.env.CLIENT_URL 
+  ? process.env.CLIENT_URL.split(',').map(url => url.trim())
+  : ['http://localhost:5173'];
+
 const corsOptions = {
   origin: (origin, callback) => {
-    const allowedOrigins = process.env.CLIENT_URL 
-      ? process.env.CLIENT_URL.split(',') 
-      : ['http://localhost:5173'];
+    // Allow requests with no origin (mobile apps, same-origin)
+    if (!origin) return callback(null, true);
     
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      logger.warn({
+        type: 'CORS_BLOCKED',
+        origin,
+        allowedOrigins
+      });
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -29,21 +58,35 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '10kb' })); // Limit request body size
+
+// Security: Rate limiting for HTTP endpoints
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per window
+  message: 'Too many requests from this IP',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/', apiLimiter);
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL 
-      ? process.env.CLIENT_URL.split(',') 
-      : ['http://localhost:5173'],
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   },
   pingTimeout: 60000,
   pingInterval: 25000,
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  maxHttpBufferSize: 1e6, // 1MB max message size
+  allowEIO3: false // Disable old protocol
 });
+
+// Security: Socket.io authentication middleware
+io.use(socketAuthMiddleware);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -51,7 +94,12 @@ app.get('/health', (req, res) => {
     status: 'ok', 
     message: 'Server is running',
     environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    security: {
+      helmet: true,
+      rateLimit: true,
+      authentication: true
+    }
   });
 });
 
@@ -59,7 +107,8 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({ 
     message: 'NoneSocial API',
-    version: '2.0.0',
+    version: '3.0.0',
+    security: 'enabled',
     docs: '/health'
   });
 });
@@ -67,8 +116,31 @@ app.get('/', (req, res) => {
 // Load socket events
 eventLoader(io);
 
+// Global error handler
+app.use((err, req, res, next) => {
+  logger.error({
+    type: 'HTTP_ERROR',
+    message: err.message,
+    stack: err.stack,
+    url: req.url
+  });
+  
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : err.message
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
+  logger.info({
+    type: 'SERVER_STARTED',
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    security: 'enabled'
+  });
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Socket.io ready for connections`);
+  console.log(`🔒 Security enabled: JWT, Rate Limiting, XSS Protection`);
 });
