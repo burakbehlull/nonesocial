@@ -20,11 +20,12 @@ import {
 import { FaCrown } from 'react-icons/fa';
 import { copyToClipboard, generateRoomLink, formatTime } from '@utils/helpers';
 
-const Room = () => {
+export default function Room() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const password = location.state?.password || '';
+  const isCreator = location.state?.isCreator || false;
   const { isDark, toggleTheme } = useTheme();
 
   const [socket, setSocket] = useState(null);
@@ -65,23 +66,41 @@ const Room = () => {
     const socketInstance = getSocket();
     setSocket(socketInstance);
 
-    socketInstance.emit('joinRoom', { roomId, password }, (response) => {
-      if (!response.success) {
-        toast.error(response.message || 'Odaya katılamadı');
+    // First get room info to check ownership
+    socketInstance.emit('getRoomInfo', { roomId }, (infoResponse) => {
+      if (!infoResponse.success) {
+        toast.error('Oda bulunamadı');
         navigate('/');
         return;
       }
 
-      setRoomInfo(response.room);
-      toast.success('Odaya katıldınız! Çağrıya katılmak için butona tıklayın.');
-    });
+      setIsOwner(infoResponse.isOwner);
+      setCurrentUserId(socketInstance.id);
+      setUsers(infoResponse.users);
 
-    socketInstance.emit('getRoomInfo', { roomId }, (response) => {
-      if (response.success) {
-        setIsOwner(response.isOwner);
-        setCurrentUserId(socketInstance.id);
-        setUsers(response.users);
-      }
+      // Then join the room
+      socketInstance.emit('joinRoom', { roomId, password }, (joinResponse) => {
+        if (!joinResponse.success) {
+          toast.error(joinResponse.message || 'Odaya katılamadı');
+          navigate('/');
+          return;
+        }
+
+        setRoomInfo(joinResponse.room);
+        
+        // Show appropriate toast based on whether user is creator or joining
+        if (isCreator) {
+          toast.success('Oda oluşturuldu! Çağrıya katılmak için butona tıklayın.', {
+            id: 'room-joined',
+            duration: 3000
+          });
+        } else {
+          toast.success('Odaya katıldınız! Çağrıya katılmak için butona tıklayın.', {
+            id: 'room-joined',
+            duration: 3000
+          });
+        }
+      });
     });
 
     socketInstance.on('roomUsers', (roomUsers) => setUsers(roomUsers));
@@ -609,6 +628,4 @@ const Room = () => {
       )}
     </div>
   );
-};
-
-export default Room;
+}

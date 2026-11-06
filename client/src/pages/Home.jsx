@@ -41,8 +41,8 @@ const Home = () => {
       videoEnabled: true
     }, (response) => {
       if (response.success) {
-        toast.success('Oda oluşturuldu!');
-        navigate(`/room/${response.roomId}`);
+        // Toast will be shown in Room component
+        navigate(`/room/${response.roomId}`, { state: { isCreator: true } });
       } else {
         toast.error('Oda oluşturulamadı');
       }
