@@ -140,14 +140,19 @@ export const useWebRTC = (roomId) => {
   }, []);
 
   // Mikrofon toggle
-  const toggleAudio = useCallback(() => {
-    if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setAudioEnabled(audioTrack.enabled);
-        console.log('🎤', audioTrack.enabled ? 'AÇIK' : 'KAPALI');
-      }
+  const toggleAudio = useCallback(async () => {
+    if (!localStreamRef.current) {
+      console.warn('⚠️ Local stream yok!');
+      return;
+    }
+    
+    const audioTrack = localStreamRef.current.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      setAudioEnabled(audioTrack.enabled);
+      console.log('🎤', audioTrack.enabled ? 'AÇIK' : 'KAPALI');
+    } else {
+      console.error('❌ Audio track bulunamadı!');
     }
   }, []);
 

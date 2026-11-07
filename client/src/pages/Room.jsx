@@ -44,7 +44,7 @@ export default function Room() {
   const {
     roomInfo,
     messages,
-    users,
+    users: storeUsers, // Store'dan gelen users'ı storeUsers olarak al
     isOwner,
     currentUserId,
     setRoomInfo,
@@ -60,6 +60,7 @@ export default function Room() {
     localStream,
     audioEnabled,
     videoEnabled,
+    users, // WebRTC'den gelen gerçek zamanlı users
     initializeMedia,
     toggleAudio,
     toggleVideo,
@@ -79,7 +80,7 @@ export default function Room() {
 
       setIsOwner(infoResponse.isOwner);
       setCurrentUserId(socketInstance.id);
-      setUsers(infoResponse.users);
+      // setUsers silindi - useWebRTC roomUsers event'ini dinliyor
 
       socketInstance.emit('joinRoom', { roomId, password }, (joinResponse) => {
         if (!joinResponse.success) {
@@ -104,7 +105,6 @@ export default function Room() {
       });
     });
 
-    socketInstance.on('roomUsers', (roomUsers) => setUsers(roomUsers));
     socketInstance.on('receiveMessage', (message) => addMessage(message));
     socketInstance.on('kicked', () => {
       toast.error('Odadan atıldınız');
@@ -123,7 +123,6 @@ export default function Room() {
     });
 
     return () => {
-      socketInstance.off('roomUsers');
       socketInstance.off('receiveMessage');
       socketInstance.off('kicked');
       socketInstance.off('banned');
@@ -223,31 +222,16 @@ export default function Room() {
 
   const handleJoinCall = async () => {
     try {
-      // Mikrofon izni iste, ancak henüz açma
       toast.loading('Mikrofon izni isteniyor...', { id: 'join-call' });
-      const stream = await initializeMedia(true); // true = start with audio MUTED
+      
+      // Mikrofon izni al, kapalı başlat
+      const stream = await initializeMedia(true); // true = muted
       setIsInCall(true);
       
-      // Kullanıcıya onay sor
-      toast.success(
-        <div>
-          <p className="font-semibold mb-2">Çağrıya katıldınız!</p>
-          <button
-            onClick={() => {
-              toggleAudio(); // Mikrofonunu aç
-              toast.dismiss('join-call');
-              toast.success('Mikrofonunuz açıldı!');
-            }}
-            className="bg-primary text-white px-3 py-1 rounded text-sm"
-          >
-            Mikrofonu Aç
-          </button>
-        </div>,
-        { 
-          id: 'join-call',
-          duration: 5000,
-        }
-      );
+      toast.success('Çağrıya katıldınız! Mikrofonu açmak için mikrofon butonuna basın.', { 
+        id: 'join-call',
+        duration: 3000 
+      });
     } catch (error) {
       toast.error('Mikrofon erişimi reddedildi', { id: 'join-call' });
       console.error('Media error:', error);
