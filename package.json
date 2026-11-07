@@ -1,6 +1,6 @@
 {
   "name": "nonesocial",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Social Application",
   "main": "server.js",
   "type": "module",

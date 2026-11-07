@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { FaCrown } from 'react-icons/fa';
+import { Badge } from './ui/badge';
+import { Crown, MessageSquare } from 'lucide-react';
 
 const formatTime = (timestamp) => {
   const date = new Date(timestamp);
@@ -13,7 +14,6 @@ const ChatMessages = ({ messages, currentUserId }) => {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
-  // Auto scroll to bottom when new message arrives
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -22,7 +22,7 @@ const ChatMessages = ({ messages, currentUserId }) => {
     scrollToBottom();
   }, [messages]);
 
-  // Group messages by user
+  // Group consecutive messages from the same user
   const groupedMessages = [];
   let currentGroup = null;
 
@@ -31,7 +31,6 @@ const ChatMessages = ({ messages, currentUserId }) => {
     const shouldGroup = prevMsg && prevMsg.from === msg.from;
 
     if (!shouldGroup) {
-      // New group
       if (currentGroup) {
         groupedMessages.push(currentGroup);
       }
@@ -43,62 +42,78 @@ const ChatMessages = ({ messages, currentUserId }) => {
         messages: [msg]
       };
     } else {
-      // Add to current group
       currentGroup.messages.push(msg);
     }
   });
 
-  // Push last group
   if (currentGroup) {
     groupedMessages.push(currentGroup);
   }
 
   if (messages.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        <div className="text-center">
-          <p className="text-lg font-medium">Henüz mesaj yok</p>
-          <p className="text-sm mt-1 opacity-75">Konuşmaya başla!</p>
+      <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/5">
+        <div className="text-center p-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
+            <MessageSquare className="w-8 h-8 text-primary/50" />
+          </div>
+          <p className="text-base font-semibold text-foreground/70">Henüz mesaj yok</p>
+          <p className="text-sm mt-2 text-muted-foreground">İlk mesajı gönderin!</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div 
+      ref={messagesContainerRef} 
+      className="flex-1 overflow-y-auto px-6 py-4 space-y-5 scrollbar-thin"
+    >
       {groupedMessages.map((group, groupIndex) => {
         const isOwner = group.role === 'owner';
+        const isSelf = group.userId === currentUserId;
 
         return (
-          <div key={groupIndex} className="flex gap-3">
+          <div 
+            key={groupIndex} 
+            className="flex gap-3 group animate-in"
+          >
             {/* Avatar */}
-            <Avatar className="h-10 w-10 flex-shrink-0">
-              <AvatarFallback className="text-sm font-medium">
+            <Avatar className="h-10 w-10 flex-shrink-0 border-2 border-primary/10">
+              <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-primary/20 to-primary/10">
                 {(group.userName || 'G')[0].toUpperCase()}
               </AvatarFallback>
             </Avatar>
 
             {/* Messages */}
-            <div className="flex-1 min-w-0">
-              {/* Header (sadece ilk mesajda) */}
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-semibold">
-                  {group.userName}
+            <div className="flex-1 min-w-0 space-y-1">
+              {/* Header - Name, Badge, Time */}
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-sm font-semibold text-foreground">
+                  {group.userName || 'Guest'}
                 </span>
                 {isOwner && (
-                  <FaCrown className="w-3 h-3 text-yellow-500" />
+                  <Badge variant="owner" className="text-[10px] px-1.5 py-0 gap-1">
+                    <Crown className="w-2.5 h-2.5" />
+                    Owner
+                  </Badge>
+                )}
+                {isSelf && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    Sen
+                  </Badge>
                 )}
                 <span className="text-xs text-muted-foreground">
                   {formatTime(group.timestamp)}
                 </span>
               </div>
 
-              {/* Message list */}
-              <div className="space-y-0.5">
+              {/* Message Group - Premium Style */}
+              <div className="space-y-1">
                 {group.messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className="text-sm leading-relaxed break-words hover:bg-muted/30 px-1 py-0.5 rounded"
+                    className="text-[15px] leading-relaxed break-words px-3 py-1.5 rounded-lg hover:bg-muted/40 transition-colors duration-150"
                   >
                     {msg.content}
                   </div>

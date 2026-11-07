@@ -15,9 +15,32 @@ function App() {
           toastOptions={{
             duration: 3000,
             style: {
-              background: '#333',
-              color: '#fff',
-            }
+              borderRadius: '12px',
+              fontWeight: '500',
+              fontSize: '14px',
+              maxWidth: '500px',
+              boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+            },
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              duration: 4000,
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+            loading: {
+              iconTheme: {
+                primary: '#8b5cf6',
+                secondary: '#fff',
+              },
+            },
           }}
         />
         <Routes>

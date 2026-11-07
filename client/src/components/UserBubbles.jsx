@@ -1,53 +1,62 @@
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { FaCrown } from 'react-icons/fa';
-import { FiMic, FiMicOff } from 'react-icons/fi';
+import { Badge } from './ui/badge';
+import { Crown, Mic, MicOff, Radio } from 'lucide-react';
 
 const UserBubble = ({ user, isInCall, hasAudio, isCurrentUser }) => {
   return (
-    <div className="flex flex-col items-center gap-1 p-2">
-      {/* Avatar with status badge */}
+    <div className="flex flex-col items-center gap-2 p-2.5 rounded-xl hover:bg-muted/30 transition-all duration-200 group">
+      {/* Avatar with animated status ring */}
       <div className="relative">
-        <Avatar className="h-12 w-12 border-2 border-background">
-          <AvatarFallback className="text-sm font-medium bg-primary/10">
+        <div className={`absolute -inset-1 rounded-full transition-all duration-300 ${
+          isInCall 
+            ? 'bg-gradient-to-r from-success to-primary opacity-75 blur-sm animate-pulse' 
+            : 'bg-muted-foreground/20 opacity-0'
+        }`} />
+        <Avatar className="relative h-12 w-12 border-2 border-background shadow-premium">
+          <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-primary/20 to-primary/10">
             {(user.name || 'G')[0].toUpperCase()}
           </AvatarFallback>
         </Avatar>
         
-        {/* Status badge */}
-        <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background flex items-center justify-center ${
-          isInCall ? 'bg-green-500' : 'bg-gray-400'
+        {/* Premium Status Badge */}
+        <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-background shadow-premium flex items-center justify-center transition-all duration-200 ${
+          isInCall ? 'bg-gradient-to-br from-success to-success/80' : 'bg-muted-foreground/40'
         }`}>
           {isInCall && (
             hasAudio ? (
-              <FiMic className="w-2.5 h-2.5 text-white" />
+              <Mic className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
             ) : (
-              <FiMicOff className="w-2.5 h-2.5 text-white" />
+              <MicOff className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />
             )
           )}
         </div>
       </div>
 
-      {/* Name + Status */}
-      <div className="flex flex-col items-center gap-0.5">
+      {/* Name + Owner Badge */}
+      <div className="flex flex-col items-center gap-1">
         <div className="flex items-center gap-1">
           {user.role === 'owner' && (
-            <FaCrown className="w-2.5 h-2.5 text-yellow-500" />
+            <Crown className="w-3 h-3 text-yellow-500" />
           )}
-          <span className="text-xs font-medium text-center truncate max-w-[60px]">
+          <span className="text-xs font-semibold text-center truncate max-w-[70px]">
             {user.name || 'Guest'}
           </span>
         </div>
+        
+        {/* Status Text with animation */}
+        <div className="flex items-center gap-1">
+          {isInCall && <Radio className="w-2.5 h-2.5 text-success animate-pulse" />}
+          <Badge 
+            variant={isInCall ? "success" : "secondary"} 
+            className="text-[10px] px-1.5 py-0 font-medium"
+          >
+            {isInCall ? 'Seste' : 'Çevrimdışı'}
+          </Badge>
+        </div>
+        
         {isCurrentUser && (
-          <span className="text-[10px] text-muted-foreground">(Sen)</span>
+          <span className="text-[10px] text-muted-foreground font-medium">(Sen)</span>
         )}
-        {/* Durum: Seste veya Çevrimdışı */}
-        <span className={`text-[10px] font-medium ${
-          isInCall 
-            ? 'text-green-600 dark:text-green-400' 
-            : 'text-gray-500 dark:text-gray-400'
-        }`}>
-          {isInCall ? 'Seste' : 'Çevrimdışı'}
-        </span>
       </div>
     </div>
   );
@@ -74,18 +83,17 @@ const UserBubbles = ({
     };
   };
 
-  // Kaç kişi seste hesapla
   const usersInCallCount = users.filter(user => {
     const { isInCall } = getUserCallStatus(user.id);
     return isInCall;
   }).length;
 
   return (
-    <div className="flex flex-col gap-2">
-      {/* Kullanıcı baloncukları */}
-      <div className="flex flex-wrap gap-2 p-3 bg-muted/30 rounded-lg">
+    <div className="space-y-3">
+      {/* User Grid - Premium */}
+      <div className="grid grid-cols-3 gap-2 p-3 bg-gradient-to-br from-muted/20 to-muted/5 rounded-xl border border-border/50">
         {users.length === 0 ? (
-          <div className="text-xs text-muted-foreground text-center w-full py-3">
+          <div className="col-span-3 text-xs text-muted-foreground text-center py-6">
             Henüz kullanıcı yok
           </div>
         ) : (
@@ -105,13 +113,14 @@ const UserBubbles = ({
         )}
       </div>
       
-      {/* İstatistik */}
+      {/* Stats - Premium */}
       {users.length > 0 && (
-        <div className="text-center px-3">
-          <span className="text-xs font-medium">
-            <span className="text-green-600 dark:text-green-400">{usersInCallCount}</span>
+        <div className="flex items-center justify-center gap-2 px-3 py-2 bg-success/5 rounded-lg border border-success/10">
+          <Radio className="w-3.5 h-3.5 text-success animate-pulse" />
+          <span className="text-xs font-semibold">
+            <span className="text-success">{usersInCallCount}</span>
             {' '}
-            <span className="text-muted-foreground">kullanıcı seste</span>
+            <span className="text-muted-foreground">/ {users.length} seste</span>
           </span>
         </div>
       )}

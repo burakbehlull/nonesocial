@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiVideo, FiLock, FiUsers, FiLogIn, FiMoon, FiSun } from 'react-icons/fi';
+import { 
+  Video, Lock, Users, LogIn, Moon, Sun,
+  Sparkles, Shield, Zap
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getSocket } from '@services/socket';
 import { validateRoomName, validatePassword } from '@utils/helpers';
@@ -8,6 +11,7 @@ import { useTheme } from '@contexts/ThemeContext';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@components/ui/card';
+import { IconButton } from '@components/ui/icon-button';
 import Footer from '@components/Footer';
 
 const Home = () => {
@@ -42,7 +46,6 @@ const Home = () => {
       videoEnabled: true
     }, (response) => {
       if (response.success) {
-        // Toast will be shown in Room component
         navigate(`/room/${response.roomId}`, { state: { isCreator: true } });
       } else {
         toast.error('Oda oluşturulamadı');
@@ -60,111 +63,124 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-secondary/20">
-      {/* Dark Mode Toggle - Top Right */}
-      <div className="fixed top-4 right-4 z-50">
-        <Button
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5 relative overflow-hidden">
+      {/* Decorative Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-48 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      </div>
+
+      {/* Theme Toggle - Premium */}
+      <div className="fixed top-6 right-6 z-50">
+        <IconButton
           variant="ghost"
-          size="icon"
+          className="glass shadow-premium"
           onClick={toggleTheme}
-          className="h-10 w-10 rounded-full"
-          aria-label={isDark ? "Aydınlık moda geç" : "Karanlık moda geç"}
-          title={isDark ? "Aydınlık moda geç" : "Karanlık moda geç"}
+          tooltip={isDark ? "Aydınlık moda geç" : "Karanlık moda geç"}
         >
-          {isDark ? <FiSun className="w-5 h-5" aria-hidden="true" /> : <FiMoon className="w-5 h-5" aria-hidden="true" />}
-        </Button>
+          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </IconButton>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="relative flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-7xl">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             
-            {/* Left Side - Hero */}
-            <div className="space-y-8">
+            {/* Left - Hero Section */}
+            <div className="space-y-10 animate-in">
               <div className="space-y-6">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10">
-                  <FiVideo className="w-8 h-8 text-primary" />
+                {/* Badge */}
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold text-primary">Anonim Sohbet</span>
                 </div>
-                <h1 className="text-5xl md:text-6xl font-bold leading-tight">
-                  <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                    None Social
-                  </span>
-                </h1>
-                <p className="text-muted-foreground text-xl leading-relaxed max-w-md">
-                  Kayıt olmadan, anonim olarak görüntülü sohbet et
-                </p>
+
+                {/* Logo & Title */}
+                <div className="space-y-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-purple-600 shadow-premium-xl">
+                    <Video className="w-8 h-8 text-white" />
+                  </div>
+                  <h1 className="text-6xl md:text-7xl font-bold leading-tight tracking-tight">
+                    <span className="gradient-text">
+                      None Social
+                    </span>
+                  </h1>
+                  <p className="text-muted-foreground text-xl leading-relaxed max-w-lg">
+                    Kayıt olmadan, güvenli ve anonim olarak görüntülü sohbet edin
+                  </p>
+                </div>
               </div>
 
-              {/* Actions */}
+              {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   size="lg"
-                  className="text-lg px-8 py-6"
+                  className="text-lg px-8 py-6 shadow-premium-xl hover:shadow-premium-lg interactive"
                   onClick={() => setShowCreateModal(true)}
                   aria-label="Yeni oda oluştur"
                 >
-                  <FiVideo className="w-5 h-5 mr-2" aria-hidden="true" />
-                  Yeni Oda
+                  <Video className="w-5 h-5 mr-2" />
+                  Yeni Oda Oluştur
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
-                  className="text-lg px-8 py-6"
+                  className="text-lg px-8 py-6 shadow-premium interactive"
                   onClick={() => setShowJoinModal(true)}
                   aria-label="Mevcut odaya katıl"
                 >
-                  <FiLogIn className="w-5 h-5 mr-2" aria-hidden="true" />
+                  <LogIn className="w-5 h-5 mr-2" />
                   Odaya Katıl
                 </Button>
               </div>
             </div>
 
-            {/* Right Side - Features */}
-            <div className="grid gap-6">
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
+            {/* Right - Feature Cards */}
+            <div className="grid gap-5 animate-in">
+              <Card className="hover:shadow-premium-lg transition-all duration-300 border-border/50 interactive group">
+                <CardHeader className="pb-4">
                   <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-xl bg-primary/10">
-                      <FiVideo className="w-6 h-6 text-primary" />
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 group-hover:from-primary/30 group-hover:to-primary/20 transition-colors">
+                      <Video className="w-6 h-6 text-primary" />
                     </div>
-                    <div>
-                      <CardTitle className="text-xl mb-2">Video & Ses</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Gerçek zamanlı görüntülü görüşme
-                      </p>
+                    <div className="flex-1">
+                      <CardTitle className="text-xl mb-2">Video & Ses Görüşmesi</CardTitle>
+                      <CardDescription className="text-sm leading-relaxed">
+                        Gerçek zamanlı, yüksek kaliteli görüntülü ve sesli iletişim
+                      </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
+              <Card className="hover:shadow-premium-lg transition-all duration-300 border-border/50 interactive group">
+                <CardHeader className="pb-4">
                   <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-xl bg-primary/10">
-                      <FiLock className="w-6 h-6 text-primary" />
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-success/20 to-success/10 group-hover:from-success/30 group-hover:to-success/20 transition-colors">
+                      <Shield className="w-6 h-6 text-success" />
                     </div>
-                    <div>
-                      <CardTitle className="text-xl mb-2">Özel Odalar</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Parola korumalı odalar oluştur
-                      </p>
+                    <div className="flex-1">
+                      <CardTitle className="text-xl mb-2">Güvenli & Özel</CardTitle>
+                      <CardDescription className="text-sm leading-relaxed">
+                        Parola korumalı odalar ve şifreli bağlantılar
+                      </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
+              <Card className="hover:shadow-premium-lg transition-all duration-300 border-border/50 interactive group">
+                <CardHeader className="pb-4">
                   <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-xl bg-primary/10">
-                      <FiUsers className="w-6 h-6 text-primary" />
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/10 group-hover:from-purple-500/30 group-hover:to-purple-500/20 transition-colors">
+                      <Zap className="w-6 h-6 text-purple-500" />
                     </div>
-                    <div>
-                      <CardTitle className="text-xl mb-2">Grup Görüşmeleri</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Birden fazla kişiyle konuş
-                      </p>
+                    <div className="flex-1">
+                      <CardTitle className="text-xl mb-2">Anında Başla</CardTitle>
+                      <CardDescription className="text-sm leading-relaxed">
+                        Kayıt gerekmez, hemen odanızı oluşturun ve paylaşın
+                      </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -178,40 +194,51 @@ const Home = () => {
       {/* Footer */}
       <Footer />
 
-      {/* Create Room Modal */}
+      {/* Create Room Modal - Premium */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in" 
+          onClick={() => setShowCreateModal(false)}
+        >
+          <Card className="w-full max-w-md shadow-premium-xl animate-in" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
-              <CardTitle>Oda Oluştur</CardTitle>
-              <CardDescription>Yeni bir video sohbet odası oluştur</CardDescription>
+              <CardTitle className="text-2xl gradient-text">Oda Oluştur</CardTitle>
+              <CardDescription>Yeni bir video sohbet odası oluşturun</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="room-name-input">Oda Adı</label>
+                <label className="text-sm font-semibold mb-2 block" htmlFor="room-name-input">
+                  Oda Adı
+                </label>
                 <Input
                   id="room-name-input"
                   placeholder="Oda adını girin"
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
                   maxLength={30}
+                  className="focus-ring"
                   aria-label="Oda adı"
                   aria-required="true"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="room-password-input">Parola (Opsiyonel)</label>
+                <label className="text-sm font-semibold mb-2 block" htmlFor="room-password-input">
+                  Parola <span className="text-muted-foreground font-normal">(Opsiyonel)</span>
+                </label>
                 <Input
                   id="room-password-input"
                   type="password"
                   placeholder="Parola girin"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="focus-ring"
                   aria-label="Oda parolası (opsiyonel)"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="room-limit-input">Maksimum Katılımcı</label>
+                <label className="text-sm font-semibold mb-2 block" htmlFor="room-limit-input">
+                  Maksimum Katılımcı
+                </label>
                 <Input
                   id="room-limit-input"
                   type="number"
@@ -219,6 +246,7 @@ const Home = () => {
                   max="20"
                   value={limit}
                   onChange={(e) => setLimit(Number(e.target.value))}
+                  className="focus-ring"
                   aria-label="Maksimum katılımcı sayısı"
                   aria-valuemin="2"
                   aria-valuemax="20"
@@ -226,9 +254,9 @@ const Home = () => {
                 />
               </div>
             </CardContent>
-            <CardFooter className="gap-2">
+            <CardFooter className="gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => setShowCreateModal(false)}
                 className="flex-1"
                 aria-label="İptal et ve modalı kapat"
@@ -237,7 +265,7 @@ const Home = () => {
               </Button>
               <Button 
                 onClick={handleCreateRoom} 
-                className="flex-1"
+                className="flex-1 shadow-premium"
                 aria-label="Oda oluştur"
               >
                 Oluştur
@@ -247,41 +275,50 @@ const Home = () => {
         </div>
       )}
 
-      {/* Join Room Modal */}
+      {/* Join Room Modal - Premium */}
       {showJoinModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in" 
+          onClick={() => setShowJoinModal(false)}
+        >
+          <Card className="w-full max-w-md shadow-premium-xl animate-in" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
-              <CardTitle>Odaya Katıl</CardTitle>
-              <CardDescription>Mevcut bir odaya katıl</CardDescription>
+              <CardTitle className="text-2xl gradient-text">Odaya Katıl</CardTitle>
+              <CardDescription>Mevcut bir odaya katılın</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="join-room-id-input">Oda ID</label>
+                <label className="text-sm font-semibold mb-2 block" htmlFor="join-room-id-input">
+                  Oda ID
+                </label>
                 <Input
                   id="join-room-id-input"
                   placeholder="Oda ID'sini girin"
                   value={joinRoomId}
                   onChange={(e) => setJoinRoomId(e.target.value)}
+                  className="focus-ring"
                   aria-label="Katılmak istediğiniz oda ID'si"
                   aria-required="true"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block" htmlFor="join-room-password-input">Parola (Gerekirse)</label>
+                <label className="text-sm font-semibold mb-2 block" htmlFor="join-room-password-input">
+                  Parola <span className="text-muted-foreground font-normal">(Gerekirse)</span>
+                </label>
                 <Input
                   id="join-room-password-input"
                   type="password"
                   placeholder="Parola girin"
                   value={joinPassword}
                   onChange={(e) => setJoinPassword(e.target.value)}
+                  className="focus-ring"
                   aria-label="Oda parolası (gerekirse)"
                 />
               </div>
             </CardContent>
-            <CardFooter className="gap-2">
+            <CardFooter className="gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => setShowJoinModal(false)}
                 className="flex-1"
                 aria-label="İptal et ve modalı kapat"
@@ -290,7 +327,7 @@ const Home = () => {
               </Button>
               <Button 
                 onClick={handleJoinRoom} 
-                className="flex-1"
+                className="flex-1 shadow-premium"
                 aria-label="Odaya katıl"
               >
                 Katıl

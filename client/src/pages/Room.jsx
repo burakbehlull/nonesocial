@@ -13,13 +13,15 @@ import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Avatar, AvatarFallback } from '@components/ui/avatar';
 import { Separator } from '@components/ui/separator';
+import { IconButton } from '@components/ui/icon-button';
+import { Badge } from '@components/ui/badge';
 import { 
-  FiCopy, FiSettings, FiUsers, FiSend, 
-  FiMic, FiMicOff, FiVideo, FiVideoOff, 
-  FiPhoneOff, FiMoon, FiSun, FiUserX,
-  FiPhoneIncoming, FiPhoneOutgoing
-} from 'react-icons/fi';
-import { FaCrown } from 'react-icons/fa';
+  Copy, Settings, Users, Send, 
+  Mic, MicOff, Video, VideoOff, 
+  PhoneOff, Moon, Sun, UserX,
+  PhoneIncoming, PhoneOutgoing, Crown,
+  MessageSquare, MonitorUp
+} from 'lucide-react';
 import { copyToClipboard, generateRoomLink, formatTime } from '@utils/helpers';
 
 export default function Room() {
@@ -68,7 +70,6 @@ export default function Room() {
     const socketInstance = getSocket();
     setSocket(socketInstance);
 
-    // First get room info to check ownership
     socketInstance.emit('getRoomInfo', { roomId }, (infoResponse) => {
       if (!infoResponse.success) {
         toast.error('Oda bulunamadı');
@@ -80,7 +81,6 @@ export default function Room() {
       setCurrentUserId(socketInstance.id);
       setUsers(infoResponse.users);
 
-      // Then join the room
       socketInstance.emit('joinRoom', { roomId, password }, (joinResponse) => {
         if (!joinResponse.success) {
           toast.error(joinResponse.message || 'Odaya katılamadı');
@@ -90,7 +90,6 @@ export default function Room() {
 
         setRoomInfo(joinResponse.room);
         
-        // Show appropriate toast based on whether user is creator or joining
         if (isCreator) {
           toast.success('Oda oluşturuldu! Çağrıya katılmak için butona tıklayın.', {
             id: 'room-joined',
@@ -225,13 +224,10 @@ export default function Room() {
   const handleJoinCall = async () => {
     try {
       toast.loading('Mikrofon izni isteniyor...', { id: 'join-call' });
-      const stream = await initializeMedia(false); // Sadece mikrofon
+      const stream = await initializeMedia(false);
       setIsInCall(true);
-      toast.success('Çağrıya katıldınız! Kamerayı açmak için butona tıklayın.', { id: 'join-call' });
+      toast.success('Çağrıya katıldınız!', { id: 'join-call' });
       
-      // Trigger peer connections with existing users
-      console.log('Media initialized, current users:', users);
-      // Emit roomUsers request to trigger peer connections
       socket?.emit('getRoomInfo', { roomId }, (response) => {
         if (response.success) {
           console.log('Room info after join call:', response);
@@ -266,89 +262,96 @@ export default function Room() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
-      <div className="border-b bg-card px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <FiUsers className="w-5 h-5 text-muted-foreground" />
-            <h1 className="text-lg font-semibold">{roomInfo?.name || roomId}</h1>
+      {/* Premium Header */}
+      <header className="border-b bg-card/50 backdrop-blur-xl px-6 py-3.5 flex items-center justify-between shadow-premium">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
+              <MonitorUp className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-base font-semibold tracking-tight">{roomInfo?.name || roomId}</h1>
+              <p className="text-xs text-muted-foreground">{users.length} katılımcı</p>
+            </div>
           </div>
-          <Button
+          
+          <IconButton
+            size="sm"
             variant="ghost"
-            size="icon"
             onClick={handleCopyLink}
-            className="h-8 w-8"
+            tooltip="Oda linkini kopyala"
           >
-            <FiCopy className="w-4 h-4" />
-          </Button>
+            <Copy className="w-4 h-4" />
+          </IconButton>
         </div>
+
         <div className="flex items-center gap-2">
-          <Button
+          <IconButton
             variant="ghost"
-            size="icon"
             onClick={toggleTheme}
-            className="h-9 w-9"
-            aria-label={isDark ? 'Aydınlık moda geç' : 'Karanlık moda geç'}
-            title={isDark ? 'Aydınlık mod' : 'Karanlık mod'}
+            tooltip={isDark ? 'Aydınlık mod' : 'Karanlık mod'}
           >
-            {isDark ? <FiSun className="w-5 h-5" aria-hidden="true" /> : <FiMoon className="w-5 h-5" aria-hidden="true" />}
-          </Button>
+            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </IconButton>
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowNameModal(true)}
-            aria-label="İsminizi değiştirin"
+            className="gap-2"
           >
-            <FiSettings className="w-4 h-4 mr-2" aria-hidden="true" />
-            İsim Değiştir
+            <Settings className="w-4 h-4" />
+            İsim
           </Button>
+
           {!isInCall ? (
             <Button
-              variant="default"
               size="sm"
               onClick={handleJoinCall}
-              className="bg-green-600 hover:bg-green-700"
-              aria-label="Video ve ses çağrısına katıl"
+              className="bg-success hover:bg-success/90 text-success-foreground gap-2 shadow-premium"
             >
-              <FiPhoneIncoming className="w-4 h-4 mr-2" aria-hidden="true" />
-              Çağrıya Gir
+              <PhoneIncoming className="w-4 h-4" />
+              Çağrıya Katıl
             </Button>
           ) : (
             <Button
               variant="destructive"
               size="sm"
               onClick={handleLeaveCall}
-              aria-label="Video ve ses çağrısından ayrıl"
+              className="gap-2 shadow-premium"
             >
-              <FiPhoneOutgoing className="w-4 h-4 mr-2" aria-hidden="true" />
+              <PhoneOutgoing className="w-4 h-4" />
               Çağrıdan Ayrıl
             </Button>
           )}
+
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={handleLeaveRoom}
-            className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-            aria-label="Odadan tamamen ayrıl"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
           >
-            <FiPhoneOff className="w-4 h-4 mr-2" aria-hidden="true" />
+            <PhoneOff className="w-4 h-4" />
             Odadan Ayrıl
           </Button>
         </div>
-      </div>
+      </header>
 
-      {/* Main Content - 3 Column Layout */}
+      {/* Main Content - 3 Column Premium Layout */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* LEFT - Video Grid + User Bubbles */}
-        <div className="w-80 border-r bg-card flex flex-col">
-          {/* User Bubbles - TÜM kullanıcılar */}
-          <div className="border-b">
+        {/* LEFT - Compact Members & Video */}
+        <aside className="w-72 border-r bg-card/30 flex flex-col">
+          {/* Members Section */}
+          <div className="border-b bg-card/50 backdrop-blur-sm">
             <div className="p-3">
-              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <FiUsers className="w-4 h-4" />
-                Üyeler ({users.length})
-              </h3>
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="w-4 h-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">Üyeler</h3>
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  {users.length}
+                </Badge>
+              </div>
               <UserBubbles
                 users={users}
                 currentUserId={currentUserId}
@@ -360,7 +363,7 @@ export default function Room() {
           </div>
 
           {/* Video Grid */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto scrollbar-thin">
             <VideoGrid
               localStream={localStream}
               peers={peers}
@@ -370,84 +373,90 @@ export default function Room() {
               videoEnabled={videoEnabled}
             />
           </div>
-        </div>
+        </aside>
 
-        {/* CENTER - Chat (Büyük, Ana Alan) */}
-        <div className="flex-1 flex flex-col bg-background">
-          <div className="p-4 border-b bg-card">
-            <h3 className="font-semibold text-lg">💬 Sohbet</h3>
+        {/* CENTER - Chat (Main Focus) */}
+        <main className="flex-1 flex flex-col bg-background">
+          <div className="px-5 py-3.5 border-b bg-card/30 backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-muted-foreground" />
+              <h2 className="font-semibold text-sm">Sohbet</h2>
+            </div>
           </div>
           
           {/* Messages */}
-          <ChatMessages messages={messages} currentUserId={currentUserId} />
+          <div className="flex-1 overflow-hidden">
+            <ChatMessages messages={messages} currentUserId={currentUserId} />
+          </div>
 
-          {/* Message Input */}
-          <div className="p-4 border-t bg-card">
-            <div className="flex gap-3">
+          {/* Message Input - Premium */}
+          <div className="p-4 border-t bg-card/30 backdrop-blur-sm">
+            <div className="flex items-center gap-3">
               <Input
-                placeholder="Mesaj yaz..."
+                placeholder="Mesajınızı yazın..."
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="flex-1 h-12 text-base"
+                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                className="flex-1 h-11 bg-background border-border/50 focus-visible:ring-primary/20 shadow-sm"
                 aria-label="Mesaj yazın"
               />
               <Button
-                size="lg"
+                size="default"
                 onClick={handleSendMessage}
                 disabled={!messageInput.trim()}
-                className="px-6"
+                className="px-5 gap-2 shadow-premium"
                 aria-label="Mesaj gönder"
               >
-                <FiSend className="w-5 h-5" aria-hidden="true" />
+                <Send className="w-4 h-4" />
+                Gönder
               </Button>
             </div>
           </div>
-        </div>
+        </main>
 
-        {/* RIGHT - Users + Audio Controls */}
-        <div className="w-80 border-l bg-card flex flex-col">
+        {/* RIGHT - Voice Controls & Participants */}
+        <aside className="w-72 border-l bg-card/30 flex flex-col">
           
-          {/* Audio Controls - Top (Only show when in call) */}
+          {/* Voice Controls - Premium Card */}
           {isInCall && (
             <>
-              <div className="p-4 border-b">
-                <h3 className="font-semibold mb-3 text-sm text-muted-foreground">Ses & Video Kontrolleri</h3>
+              <div className="p-4 border-b bg-card/50 backdrop-blur-sm">
+                <h3 className="text-sm font-semibold mb-4 text-muted-foreground">Kontroller</h3>
                 <div className="flex items-center justify-center gap-3">
-                  <Button
-                    variant={audioEnabled ? "default" : "destructive"}
-                    size="icon"
-                    className="h-14 w-14 rounded-full"
+                  <IconButton
+                    variant={audioEnabled ? "success" : "destructive"}
+                    size="lg"
                     onClick={toggleAudio}
-                    title={audioEnabled ? 'Sustur' : 'Sesi aç'}
+                    tooltip={audioEnabled ? 'Sustur' : 'Sesi aç'}
+                    className="shadow-premium-lg"
                   >
-                    {audioEnabled ? <FiMic className="w-6 h-6" /> : <FiMicOff className="w-6 h-6" />}
-                  </Button>
+                    {audioEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                  </IconButton>
 
-                  <Button
-                    variant={videoEnabled ? "default" : "destructive"}
-                    size="icon"
-                    className="h-14 w-14 rounded-full"
+                  <IconButton
+                    variant={videoEnabled ? "primary" : "destructive"}
+                    size="lg"
                     onClick={handleToggleVideo}
-                    title={videoEnabled ? 'Kamerayı kapat' : 'Kamerayı aç'}
+                    tooltip={videoEnabled ? 'Kamerayı kapat' : 'Kamerayı aç'}
+                    className="shadow-premium-lg"
                   >
-                    {videoEnabled ? <FiVideo className="w-6 h-6" /> : <FiVideoOff className="w-6 h-6" />}
-                  </Button>
+                    {videoEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+                  </IconButton>
                 </div>
               </div>
               <Separator />
             </>
           )}
 
-          {/* Users List */}
-          <div className="flex-1 overflow-auto p-4">
+          {/* Participants List */}
+          <div className="flex-1 overflow-auto p-4 scrollbar-thin">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-sm text-muted-foreground">
+              <h3 className="text-sm font-semibold text-muted-foreground">
                 Katılımcılar
               </h3>
-              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
+              <Badge variant="secondary" className="text-xs">
                 {users.length}
-              </span>
+              </Badge>
             </div>
             
             <div className="space-y-2">
@@ -456,62 +465,68 @@ export default function Room() {
                 const userIsOwner = user.role === 'owner';
                 
                 return (
-                  <Card key={user.id} className="p-3 group">
+                  <Card key={user.id} className="p-3 hover:shadow-premium transition-all duration-200 group">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        <Avatar className="h-10 w-10 border-2 border-primary/20">
-                          <AvatarFallback className="text-sm font-semibold bg-primary/10">
-                            {(user.name || 'G')[0].toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="relative">
+                          <Avatar className="h-9 w-9 border-2 border-primary/20">
+                            <AvatarFallback className="text-xs font-semibold bg-primary/10">
+                              {(user.name || 'G')[0].toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          {isSelf && audioEnabled && (
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-success border-2 border-card" />
+                          )}
+                        </div>
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-semibold truncate">
+                            {userIsOwner && <Crown className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />}
+                            <span className="text-sm font-medium truncate">
                               {user.name || 'Guest'}
                             </span>
-                            {userIsOwner && <FaCrown className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />}
                           </div>
                           {isSelf && (
                             <span className="text-xs text-muted-foreground">
-                              (Sen)
+                              Sen
                             </span>
                           )}
                         </div>
 
-                        {/* Microphone Status */}
-                        <div className="flex items-center gap-1">
+                        {/* Mic Status */}
+                        <div>
                           {isSelf ? (
                             audioEnabled ? (
-                              <div className="bg-green-500/20 p-1.5 rounded-full">
-                                <FiMic className="w-3.5 h-3.5 text-green-600" />
+                              <div className="bg-success/10 p-1.5 rounded-full">
+                                <Mic className="w-3.5 h-3.5 text-success" />
                               </div>
                             ) : (
-                              <div className="bg-red-500/20 p-1.5 rounded-full">
-                                <FiMicOff className="w-3.5 h-3.5 text-red-600" />
+                              <div className="bg-destructive/10 p-1.5 rounded-full">
+                                <MicOff className="w-3.5 h-3.5 text-destructive" />
                               </div>
                             )
                           ) : (
-                            <div className="bg-green-500/20 p-1.5 rounded-full">
-                              <FiMic className="w-3.5 h-3.5 text-green-600" />
+                            <div className="bg-success/10 p-1.5 rounded-full">
+                              <Mic className="w-3.5 h-3.5 text-success" />
                             </div>
                           )}
                         </div>
                       </div>
                       
                       {isOwner && !isSelf && !userIsOwner && (
-                        <Button
+                        <IconButton
                           variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 ml-2 opacity-0 group-hover:opacity-100"
+                          size="sm"
+                          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => {
                             setSelectedUser(user.id);
                             setEditingUserName(user.name || '');
                             setShowUserMenu(true);
                           }}
+                          tooltip="Kullanıcı yönetimi"
                         >
-                          <FiUserX className="w-4 h-4 text-destructive" />
-                        </Button>
+                          <UserX className="w-4 h-4 text-destructive" />
+                        </IconButton>
                       )}
                     </div>
                   </Card>
@@ -519,15 +534,15 @@ export default function Room() {
               })}
             </div>
           </div>
-        </div>
+        </aside>
       </div>
 
-      {/* Name Modal */}
+      {/* Premium Name Modal */}
       {showNameModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in" onClick={() => setShowNameModal(false)}>
+          <Card className="w-full max-w-md shadow-premium-xl animate-in" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4">İsim Değiştir</h2>
+              <h2 className="text-xl font-semibold mb-4 gradient-text">İsim Değiştir</h2>
               <Input
                 placeholder="İsminizi girin"
                 value={userName}
@@ -535,12 +550,13 @@ export default function Room() {
                 onKeyPress={(e) => e.key === 'Enter' && handleChangeName()}
                 maxLength={20}
                 autoFocus
+                className="mb-4"
                 aria-label="Yeni kullanıcı adınız"
                 aria-required="true"
               />
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-3">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setShowNameModal(false)}
                   className="flex-1"
                   aria-label="İptal et"
@@ -549,7 +565,7 @@ export default function Room() {
                 </Button>
                 <Button 
                   onClick={handleChangeName} 
-                  className="flex-1"
+                  className="flex-1 shadow-premium"
                   aria-label="İsmi kaydet"
                 >
                   Kaydet
@@ -560,12 +576,12 @@ export default function Room() {
         </div>
       )}
 
-      {/* User Management Modal */}
+      {/* Premium User Management Modal */}
       {showUserMenu && selectedUser && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowUserMenu(false)}>
-          <Card className="w-full max-w-sm bg-card border" onClick={(e) => e.stopPropagation()}>
-            <div className="p-4">
-              <h3 className="text-lg font-bold mb-4">Kullanıcı Yönetimi</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in" onClick={() => setShowUserMenu(false)}>
+          <Card className="w-full max-w-sm shadow-premium-xl animate-in" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <h3 className="text-lg font-bold mb-4 gradient-text">Kullanıcı Yönetimi</h3>
               
               {/* Change Name */}
               <div className="mb-4">
@@ -584,6 +600,7 @@ export default function Room() {
                   <Button 
                     onClick={handleChangeUserName}
                     size="sm"
+                    className="shadow-premium"
                     aria-label="İsmi değiştir"
                   >
                     Değiştir
@@ -595,19 +612,21 @@ export default function Room() {
               <div className="space-y-2">
                 <Button
                   onClick={() => handleKickUser(selectedUser)}
-                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-white justify-start"
+                  variant="outline"
+                  className="w-full justify-start gap-2 border-yellow-500/50 text-yellow-600 hover:bg-yellow-500/10"
                   aria-label="Kullanıcıyı odadan at"
                 >
-                  <FiUserX className="w-4 h-4 mr-2" aria-hidden="true" />
+                  <UserX className="w-4 h-4" />
                   Kullanıcıyı At
                 </Button>
                 
                 <Button
                   onClick={() => handleBanUser(selectedUser)}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white justify-start"
+                  variant="destructive"
+                  className="w-full justify-start gap-2 shadow-premium"
                   aria-label="Kullanıcıyı kalıcı olarak banla"
                 >
-                  <FiUserX className="w-4 h-4 mr-2" aria-hidden="true" />
+                  <UserX className="w-4 h-4" />
                   Kullanıcıyı Banla
                 </Button>
               </div>
@@ -628,4 +647,5 @@ export default function Room() {
       )}
     </div>
   );
+
 }

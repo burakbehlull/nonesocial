@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { FiMicOff, FiVideoOff, FiPhoneOff } from 'react-icons/fi';
-import { FaCrown } from 'react-icons/fa';
+import { MicOff, VideoOff, PhoneOff, Crown, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card } from './ui/card';
 import { Avatar, AvatarFallback } from './ui/avatar';
+import { Badge } from './ui/badge';
 
 const VideoTile = ({ stream, name, isSelf, audioEnabled, videoEnabled, isOwner }) => {
   const videoRef = useRef(null);
@@ -15,7 +15,7 @@ const VideoTile = ({ stream, name, isSelf, audioEnabled, videoEnabled, isOwner }
   }, [stream]);
 
   return (
-    <Card className="relative overflow-hidden bg-muted/50 border aspect-square group">
+    <Card className="relative overflow-hidden bg-gradient-to-br from-muted/50 to-muted/20 border-border/50 aspect-video group hover:shadow-premium transition-all duration-300">
       {stream && videoEnabled ? (
         <video
           ref={videoRef}
@@ -25,33 +25,44 @@ const VideoTile = ({ stream, name, isSelf, audioEnabled, videoEnabled, isOwner }
           className="w-full h-full object-cover"
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-          <Avatar className="h-16 w-16">
-            <AvatarFallback className="text-2xl">
-              {(name || 'G')[0].toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-muted/30">
+          <div className="relative">
+            <div className="absolute -inset-4 bg-primary/20 rounded-full blur-xl" />
+            <Avatar className="relative h-20 w-20 border-2 border-primary/30 shadow-premium-lg">
+              <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-primary/20 to-primary/10">
+                {(name || 'G')[0].toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </div>
         </div>
       )}
       
-      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-full">
-          <span className="text-white text-xs font-medium truncate max-w-[100px]">
+      {/* Premium Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      
+      {/* Info Bar */}
+      <div className="absolute bottom-0 left-0 right-0 p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 glass px-3 py-1.5 rounded-full">
+          {isOwner && (
+            <div className="flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-premium">
+              <Crown className="w-3 h-3 text-white" />
+            </div>
+          )}
+          <span className="text-white text-sm font-semibold truncate max-w-[120px] drop-shadow">
             {name || 'Guest'}
             {isSelf && ' (Sen)'}
           </span>
-          {isOwner && <FaCrown className="w-3 h-3 text-yellow-400" />}
         </div>
         
-        <div className="flex gap-1">
+        <div className="flex gap-1.5">
           {!audioEnabled && (
-            <div className="bg-red-500/90 backdrop-blur-sm p-1 rounded-full">
-              <FiMicOff className="w-2.5 h-2.5 text-white" />
+            <div className="glass bg-destructive/20 backdrop-blur-md p-1.5 rounded-full shadow-premium">
+              <MicOff className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
             </div>
           )}
           {!videoEnabled && (
-            <div className="bg-red-500/90 backdrop-blur-sm p-1 rounded-full">
-              <FiVideoOff className="w-2.5 h-2.5 text-white" />
+            <div className="glass bg-destructive/20 backdrop-blur-md p-1.5 rounded-full shadow-premium">
+              <VideoOff className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
             </div>
           )}
         </div>
@@ -61,10 +72,8 @@ const VideoTile = ({ stream, name, isSelf, audioEnabled, videoEnabled, isOwner }
 };
 
 const VideoGrid = ({ localStream, peers, users, currentUserId, audioEnabled, videoEnabled }) => {
-  // Sadece seste olan kullanıcıların videoları
   const activeVideos = [];
   
-  // Local video (eğer seste isek)
   if (localStream) {
     activeVideos.push({
       stream: localStream,
@@ -75,7 +84,6 @@ const VideoGrid = ({ localStream, peers, users, currentUserId, audioEnabled, vid
     });
   }
   
-  // Remote videolar (seste olanlar)
   Object.entries(peers).forEach(([userId, { stream }]) => {
     if (stream) {
       activeVideos.push({
@@ -108,21 +116,30 @@ const VideoGrid = ({ localStream, peers, users, currentUserId, audioEnabled, vid
     return user?.role === 'owner';
   };
 
-  // Hiç video yoksa boş mesaj
   if (totalVideos === 0) {
     return (
-      <div className="flex items-center justify-center h-full bg-muted/20 rounded-lg m-2">
-        <div className="text-center text-muted-foreground p-8">
-          <FiPhoneOff className="w-16 h-16 mx-auto mb-4 opacity-50" />
-          <p className="text-lg font-medium">Henüz kimse seste değil</p>
-          <p className="text-sm mt-2 opacity-75">Aramaya katılmak için "Çağrıya Katıl" butonuna tıklayın</p>
+      <div className="flex items-center justify-center h-full bg-gradient-to-br from-muted/10 to-muted/5 rounded-xl m-3 border border-dashed border-border/50">
+        <div className="text-center text-muted-foreground p-8 max-w-sm">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-primary/10 rounded-full blur-2xl" />
+            <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-muted to-muted/50 border border-border/50 shadow-premium">
+              <PhoneOff className="w-10 h-10 text-muted-foreground/50" strokeWidth={1.5} />
+            </div>
+          </div>
+          <p className="text-base font-semibold text-foreground/80 mb-2">Henüz kimse seste değil</p>
+          <p className="text-sm text-muted-foreground">Aramaya katılmak için <strong className="text-success">Çağrıya Katıl</strong> butonuna tıklayın</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={cn("grid gap-3 h-full p-2", getGridClass())}>
+    <div className={cn(
+      "grid gap-3 p-3",
+      totalVideos === 1 && "h-full",
+      totalVideos > 1 && "auto-rows-fr",
+      getGridClass()
+    )}>
       {activeVideos.map(({ stream, userId, isSelf, audioEnabled, videoEnabled }) => (
         <VideoTile
           key={userId}
