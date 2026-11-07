@@ -24,31 +24,31 @@ export const useWebRTC = (roomId) => {
   const socket = useRef(null);
   const localStreamRef = useRef(null);
 
-  // Mikrofon/kamera aç - HER ZAMAN video track al
-  const initializeMedia = useCallback(async (includeVideo = false) => {
+  // Mikrofon/kamera aç
+  const initializeMedia = useCallback(async (startMuted = false) => {
     try {
-      console.log('🎤 Media izni isteniyor... (video:', includeVideo, ')');
+      console.log('🎤 Media izni isteniyor... (startMuted:', startMuted, ')');
       
-      // HER ZAMAN hem audio hem video al
+      // HER ZAMAN audio al (video opsiyonel)
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: true
+        video: false // Kamerayı sadece kullanıcı isterse açacağız
       });
       
-      // Video'yu kullanıcı istemediyse kapat
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = includeVideo;
+      // Eğer muted başlatılacaksa mikrofonu kapat
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !startMuted;
       }
       
       console.log('✅ Media erişimi verildi');
       console.log('  📊 Audio tracks:', stream.getAudioTracks().length);
-      console.log('  📊 Video tracks:', stream.getVideoTracks().length);
+      console.log('  📊 Audio enabled:', audioTrack?.enabled);
       
       localStreamRef.current = stream;
       setLocalStream(stream);
-      setAudioEnabled(true);
-      setVideoEnabled(includeVideo);
+      setAudioEnabled(!startMuted);
+      setVideoEnabled(false);
       
       return stream;
     } catch (error) {
@@ -152,14 +152,48 @@ export const useWebRTC = (roomId) => {
   }, []);
 
   // Kamera toggle
-  const toggleVideo = useCallback(() => {
-    if (localStreamRef.current) {
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setVideoEnabled(videoTrack.enabled);
-        console.log('📹', videoTrack.enabled ? 'AÇIK' : 'KAPALI');
+  const toggleVideo = useCallback(async () => {
+    if (!localStreamRef.current) return;
+    
+    const videoTrack = localStreamRef.current.getVideoTracks()[0];
+    
+    // Eğer video track yoksa, ilk defa açılıyor demektir
+    if (!videoTrack) {
+      try {
+        console.log('📹 Kamera izni isteniyor...');
+        
+        // Yeni video stream al
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+        
+        const newVideoTrack = videoStream.getVideoTracks()[0];
+        
+        // Video track'i mevcut stream'e ekle
+        localStreamRef.current.addTrack(newVideoTrack);
+        
+        // Peer connections'a da ekle
+        Object.values(peerConnections.current).forEach(pc => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+          if (!sender) {
+            pc.addTrack(newVideoTrack, localStreamRef.current);
+            console.log('  ➕ Video track peer\'e eklendi');
+          }
+        });
+        
+        setVideoEnabled(true);
+        setLocalStream(localStreamRef.current);
+        console.log('✅ Kamera açıldı');
+      } catch (error) {
+        console.error('❌ Kamera hatası:', error);
+        throw error;
       }
+    } else {
+      // Video track varsa sadece enable/disable yap
+      videoTrack.enabled = !videoTrack.enabled;
+      setVideoEnabled(videoTrack.enabled);
+      console.log('📹', videoTrack.enabled ? 'AÇIK' : 'KAPALI');
     }
   }, []);
 

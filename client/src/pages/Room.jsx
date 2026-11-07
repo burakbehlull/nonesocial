@@ -223,16 +223,31 @@ export default function Room() {
 
   const handleJoinCall = async () => {
     try {
+      // Mikrofon izni iste, ancak henüz açma
       toast.loading('Mikrofon izni isteniyor...', { id: 'join-call' });
-      const stream = await initializeMedia(false);
+      const stream = await initializeMedia(true); // true = start with audio MUTED
       setIsInCall(true);
-      toast.success('Çağrıya katıldınız!', { id: 'join-call' });
       
-      socket?.emit('getRoomInfo', { roomId }, (response) => {
-        if (response.success) {
-          console.log('Room info after join call:', response);
+      // Kullanıcıya onay sor
+      toast.success(
+        <div>
+          <p className="font-semibold mb-2">Çağrıya katıldınız!</p>
+          <button
+            onClick={() => {
+              toggleAudio(); // Mikrofonunu aç
+              toast.dismiss('join-call');
+              toast.success('Mikrofonunuz açıldı!');
+            }}
+            className="bg-primary text-white px-3 py-1 rounded text-sm"
+          >
+            Mikrofonu Aç
+          </button>
+        </div>,
+        { 
+          id: 'join-call',
+          duration: 5000,
         }
-      });
+      );
     } catch (error) {
       toast.error('Mikrofon erişimi reddedildi', { id: 'join-call' });
       console.error('Media error:', error);

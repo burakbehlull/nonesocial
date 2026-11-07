@@ -21,6 +21,18 @@ const userSockets = new Map(); // userId -> socket.id mapping
 const MAX_ROOMS = 1000;
 const ROOM_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 
+// Rastgele kullanıcı adı oluştur
+const generateGuestName = () => {
+  const adjectives = ['Hızlı', 'Sessiz', 'Gizli', 'Kayıp', 'Gizemli', 'Anonim', 'Meçhul', 'Belirsiz', 'Sakin', 'Karanlık'];
+  const nouns = ['Gezgin', 'Yolcu', 'Ziyaretçi', 'Kullanıcı', 'Kişi', 'İzleyici', 'Konuk', 'Arkadaş', 'Yabancı', 'Ruh'];
+  
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const num = Math.floor(Math.random() * 999) + 1;
+  
+  return `${adj} ${noun} ${num}`;
+};
+
 // Clean expired rooms every hour
 setInterval(() => {
   const now = Date.now();
@@ -119,7 +131,7 @@ export default (io, socket) => {
       };
 
       rooms[roomId].members[socket.userId] = {
-        name: 'Guest',
+        name: generateGuestName(),
         socketId: socket.id,
         joinedAt: Date.now()
       };
@@ -220,7 +232,7 @@ export default (io, socket) => {
         existingMember.socketId = socket.id;
       } else {
         room.members[socket.userId] = {
-          name: 'Guest',
+          name: generateGuestName(),
           socketId: socket.id,
           joinedAt: Date.now()
         };
