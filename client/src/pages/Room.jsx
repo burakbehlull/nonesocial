@@ -74,8 +74,12 @@ export default function Room() {
       }
 
       setIsOwner(infoResponse.isOwner);
-      setCurrentUserId(socketInstance.id);
-      // setUsers silindi - useWebRTC roomUsers event'ini dinliyor
+      
+      // Backend'den gelen userId'yi kullan (localStorage'dan)
+      const userId = localStorage.getItem('userId');
+      setCurrentUserId(userId);
+      
+      console.log('👤 Current User ID:', userId);
 
       socketInstance.emit('joinRoom', { roomId, password }, (joinResponse) => {
         if (!joinResponse.success) {
@@ -474,7 +478,7 @@ export default function Room() {
                               {user.name || 'Guest'}
                             </span>
                             {!userInCall && (
-                              <span className="text-xs text-muted-foreground">(Çevrimdışı)</span>
+                              <span className="text-xs text-muted-foreground">(Odada)</span>
                             )}
                           </div>
                           {isSelf && (

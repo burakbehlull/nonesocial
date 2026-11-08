@@ -50,7 +50,7 @@ const UserBubble = ({ user, isInCall, hasAudio, isCurrentUser }) => {
             variant={isInCall ? "success" : "secondary"} 
             className="text-[10px] px-1.5 py-0 font-medium"
           >
-            {isInCall ? 'Seste' : 'Çevrimdışı'}
+            {isInCall ? 'Seste' : 'Odada'}
           </Badge>
         </div>
         
@@ -68,6 +68,13 @@ const UserBubbles = ({
   audioEnabled,
   isInCall: currentUserInCall = false
 }) => {
+  console.log('👥 UserBubbles render:', {
+    usersCount: users.length,
+    currentUserId,
+    currentUserInCall,
+    users: users.map(u => ({ id: u.id, name: u.name, inCall: u.inCall }))
+  });
+
   const getUserCallStatus = (userId) => {
     // Kullanıcının inCall bilgisi backend'den geliyor
     const user = users.find(u => u.id === userId);
