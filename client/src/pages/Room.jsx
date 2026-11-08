@@ -53,6 +53,9 @@ export default function Room() {
     clearRoom
   } = useRoomStore();
 
+  // ✅ ÖNCE currentUserId'yi tanımla
+  const currentUserId = localStorage.getItem('userId');
+
   const {
     audioEnabled,
     users: rawUsers, // Socket Audio'dan gelen gerçek zamanlı users
@@ -82,9 +85,6 @@ export default function Room() {
     
     return rawUsers;
   }, [rawUsers, currentUserId]);
-  
-  // Her zaman localStorage'dan currentUserId al (tek kaynak)
-  const currentUserId = localStorage.getItem('userId');
   
   // Prevent double initialization in React Strict Mode
   const initialized = useRef(false);
