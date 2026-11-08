@@ -10,6 +10,61 @@ const formatTime = (timestamp) => {
   return `${hours}:${minutes}`;
 };
 
+// 🔥 Mention parsing ve highlighting
+const parseMentions = (content, mentions = [], currentUserId) => {
+  if (!mentions || mentions.length === 0) {
+    return <span>{content}</span>;
+  }
+
+  const parts = [];
+  let lastIndex = 0;
+
+  // Mentions'ı offset'e göre sırala
+  const sortedMentions = [...mentions].sort((a, b) => a.offset - b.offset);
+
+  sortedMentions.forEach((mention, index) => {
+    // Mention öncesi text
+    if (mention.offset > lastIndex) {
+      parts.push(
+        <span key={`text-${index}`}>
+          {content.slice(lastIndex, mention.offset)}
+        </span>
+      );
+    }
+
+    // Mention - vurgulu
+    const isSelfMention = mention.userId === currentUserId;
+    parts.push(
+      <span
+        key={`mention-${index}`}
+        className={`inline-flex items-center font-semibold px-1.5 py-0.5 rounded transition-all duration-200 cursor-pointer ${
+          isSelfMention
+            ? 'bg-primary/20 text-primary ring-1 ring-primary/30 hover:bg-primary/30 hover:ring-primary/50 hover:scale-105'
+            : 'bg-muted text-foreground/90 hover:bg-muted/80 hover:text-foreground hover:scale-105'
+        }`}
+        title={`@${mention.name} (ID: ${mention.userId.slice(0, 8)})`}
+        onClick={() => {
+          // Future: Mention'a tıklayınca kullanıcı profiline git veya DM aç
+          console.log('Clicked mention:', mention);
+        }}
+      >
+        @{mention.name}
+      </span>
+    );
+
+    lastIndex = mention.offset + mention.length;
+  });
+
+  // Kalan text
+  if (lastIndex < content.length) {
+    parts.push(
+      <span key="text-end">{content.slice(lastIndex)}</span>
+    );
+  }
+
+  return <>{parts}</>;
+};
+
 const ChatMessages = ({ messages, currentUserId }) => {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -108,14 +163,14 @@ const ChatMessages = ({ messages, currentUserId }) => {
                 </span>
               </div>
 
-              {/* Message Group - Premium Style */}
+              {/* Message Group - Premium Style with Mention Highlighting */}
               <div className="space-y-1">
                 {group.messages.map((msg) => (
                   <div
                     key={msg.id}
                     className="text-[15px] leading-relaxed break-words px-3 py-1.5 rounded-lg hover:bg-muted/40 transition-colors duration-150"
                   >
-                    {msg.content}
+                    {parseMentions(msg.content, msg.mentions, currentUserId)}
                   </div>
                 ))}
               </div>

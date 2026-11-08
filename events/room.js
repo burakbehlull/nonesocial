@@ -390,23 +390,96 @@ export default (io, socket) => {
         return callback?.({ success: false, message: 'Message cannot be empty' });
       }
 
+      // 🎯 MENTION PARSING: @username veya @userId pattern'lerini bul
+      const mentionPattern = /@(\w+)/g;
+      const mentions = [];
+      const mentionedUsers = new Set();
+      let match;
+
+      while ((match = mentionPattern.exec(sanitized)) !== null) {
+        const mentionText = match[1]; // "username" veya "userId"
+        
+        // Boş mention kontrolü
+        if (!mentionText || mentionText.length === 0) continue;
+        
+        // Önce username ile eşleşen kullanıcıyı bul (case-insensitive)
+        let mentionedUser = Object.entries(room.members).find(
+          ([userId, member]) => member.name.toLowerCase() === mentionText.toLowerCase()
+        );
+        
+        // Username bulunamazsa, userId olarak dene
+        if (!mentionedUser && room.members[mentionText]) {
+          mentionedUser = [mentionText, room.members[mentionText]];
+        }
+        
+        if (mentionedUser) {
+          const [userId, userMember] = mentionedUser;
+          
+          // Kendini mention edemez (bildirim gönderilmez ama mention array'e eklenir)
+          if (userId === socket.userId) continue;
+          
+          // Duplicate mention kontrolü
+          if (!mentionedUsers.has(userId)) {
+            mentions.push({
+              userId,
+              name: userMember.name,
+              offset: match.index,
+              length: match[0].length
+            });
+            mentionedUsers.add(userId);
+          }
+        }
+      }
+
       const msg = {
         id: nanoid(6),
         from: socket.userId,
         name: member.name,
         content: sanitized,
         role: room.ownerId === socket.userId ? 'owner' : 'member',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        mentions: mentions.length > 0 ? mentions : undefined // Mentions array
       };
 
       logger.info({
         type: 'MESSAGE_SENT',
         roomId,
         userId: socket.userId,
-        messageLength: sanitized.length
+        messageLength: sanitized.length,
+        mentionsCount: mentions.length
       });
 
+      // Mesajı tüm odaya gönder
       io.to(roomId).emit('receiveMessage', msg);
+      
+      // 🔔 Mention edilen kullanıcılara özel bildirim gönder
+      if (mentions.length > 0) {
+        mentions.forEach(({ userId: mentionedUserId }) => {
+          const mentionedSocketId = userSockets.get(mentionedUserId);
+          if (mentionedSocketId && mentionedUserId !== socket.userId) {
+            io.to(mentionedSocketId).emit('mentioned', {
+              message: {
+                id: msg.id,
+                content: msg.content,
+                timestamp: msg.timestamp
+              },
+              mentionedBy: {
+                userId: socket.userId,
+                name: member.name
+              },
+              roomId
+            });
+            
+            logger.info({
+              type: 'USER_MENTIONED',
+              roomId,
+              mentionedBy: socket.userId,
+              mentionedUser: mentionedUserId
+            });
+          }
+        });
+      }
+      
       callback?.({ success: true });
     } catch (error) {
       logger.error({

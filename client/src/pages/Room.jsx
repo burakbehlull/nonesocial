@@ -7,6 +7,7 @@ import { useRoomStore } from '@store/roomStore';
 import { useTheme } from '@contexts/ThemeContext';
 import UserBubbles from '@components/UserBubbles';
 import ChatMessages from '@components/ChatMessages';
+import MentionAutocomplete from '@components/MentionAutocomplete';
 import { Card } from '@components/ui/card';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
@@ -38,6 +39,13 @@ export default function Room() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [editingUserName, setEditingUserName] = useState('');
+
+  // 🔥 Mention System State
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [mentionStartPos, setMentionStartPos] = useState(0);
+  const messageInputRef = useRef(null);
 
   const {
     roomInfo,
@@ -178,6 +186,44 @@ export default function Room() {
     });
 
     socketInstance.on('receiveMessage', (message) => addMessage(message));
+    
+    // 🔥 Mention Notification
+    socketInstance.on('mentioned', ({ message, mentionedBy }) => {
+      const mentionerName = mentionedBy?.name || 'Birisi';
+      toast.custom((t) => (
+        <div 
+          className={`${
+            t.visible ? 'animate-in slide-in-from-top-5' : 'animate-out slide-out-to-top-5'
+          } max-w-md w-full bg-gradient-to-r from-primary to-primary/90 shadow-xl rounded-xl pointer-events-auto flex items-center gap-3 p-4 border border-primary/20`}
+        >
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex-shrink-0">
+            <span className="text-xl font-bold text-white">
+              {mentionerName[0].toUpperCase()}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">
+              {mentionerName} senden bahsetti
+            </p>
+            <p className="text-xs text-white/90 line-clamp-2 mt-0.5">
+              {message.content}
+            </p>
+          </div>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="flex-shrink-0 p-1.5 rounded-full hover:bg-white/20 transition-colors"
+          >
+            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      ), {
+        duration: 6000,
+        position: 'top-right',
+      });
+    });
+    
     socketInstance.on('kicked', () => {
       toast.error('Odadan atıldınız');
       handleLeaveRoom();
@@ -196,6 +242,7 @@ export default function Room() {
 
     return () => {
       socketInstance.off('receiveMessage');
+      socketInstance.off('mentioned'); // 🔥 Mention event cleanup
       socketInstance.off('kicked');
       socketInstance.off('banned');
       socketInstance.off('nameChanged');
@@ -214,11 +261,128 @@ export default function Room() {
     socket.emit('sendMessage', { roomId, message: messageInput }, (response) => {
       if (response?.success) {
         setMessageInput('');
+        setShowMentions(false); // Mention dropdown'ı kapat
       } else {
         toast.error('Mesaj gönderilemedi');
       }
     });
   };
+
+  // 🔥 Mention System: @ karakterini algıla
+  const handleMessageInputChange = (e) => {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart;
+    
+    setMessageInput(value);
+
+    // @ karakterini ara
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      // @ sonrasında boşluk yoksa ve @ en son karakterse
+      const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1);
+      if (!textAfterAt.includes(' ') && textAfterAt.length >= 0) {
+        setMentionQuery(textAfterAt.toLowerCase());
+        setMentionStartPos(lastAtIndex);
+        setShowMentions(true);
+        setSelectedMentionIndex(0);
+      } else {
+        setShowMentions(false);
+      }
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  // 🔥 Mention System: Filtrelenmiş kullanıcı listesi
+  const filteredUsers = useMemo(() => {
+    if (!showMentions) return [];
+    
+    return users.filter(user => {
+      // Kendini hariç tut
+      if (user.id === currentUserId) return false;
+      
+      // İsim veya ID'ye göre ara
+      const nameMatch = user.name?.toLowerCase().includes(mentionQuery);
+      const idMatch = user.id?.toLowerCase().includes(mentionQuery);
+      
+      return nameMatch || idMatch;
+    });
+  }, [showMentions, users, mentionQuery, currentUserId]);
+
+  // 🔥 Mention System: Keyboard navigation
+  const handleMessageInputKeyDown = (e) => {
+    if (!showMentions || filteredUsers.length === 0) {
+      // Normal enter işlemi
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage();
+      }
+      return;
+    }
+
+    // Mention dropdown açıkken klavye kontrolü
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedMentionIndex((prev) => 
+          prev < filteredUsers.length - 1 ? prev + 1 : 0
+        );
+        break;
+      
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedMentionIndex((prev) => 
+          prev > 0 ? prev - 1 : filteredUsers.length - 1
+        );
+        break;
+      
+      case 'Enter':
+      case 'Tab':
+        e.preventDefault();
+        handleMentionSelect(filteredUsers[selectedMentionIndex]);
+        break;
+      
+      case 'Escape':
+        e.preventDefault();
+        setShowMentions(false);
+        break;
+      
+      default:
+        break;
+    }
+  };
+
+  // 🔥 Mention System: Mention seçimi
+  const handleMentionSelect = (user) => {
+    if (!user) return;
+    
+    const beforeMention = messageInput.slice(0, mentionStartPos);
+    const afterMention = messageInput.slice(messageInputRef.current?.selectionStart || messageInput.length);
+    
+    // @username formatında ekle, sonuna boşluk ekle
+    const newMessage = `${beforeMention}@${user.name} ${afterMention}`;
+    setMessageInput(newMessage);
+    setShowMentions(false);
+    
+    // Input'a focus geri dön ve cursor'ı mention sonrasına koy
+    setTimeout(() => {
+      if (messageInputRef.current) {
+        const newCursorPos = beforeMention.length + user.name.length + 2; // +1 for @, +1 for space
+        messageInputRef.current.focus();
+        messageInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  };
+
+  // 🔥 Expose setSelectedMentionIndex for mouse hover
+  useEffect(() => {
+    window.selectedMentionIndexSetter = setSelectedMentionIndex;
+    return () => {
+      window.selectedMentionIndexSetter = null;
+    };
+  }, []);
 
   const handleChangeName = () => {
     if (!userName.trim()) {
@@ -641,14 +805,41 @@ export default function Room() {
             <ChatMessages messages={messages} currentUserId={currentUserId} />
           </div>
 
-          {/* Message Input - Premium */}
-          <div className="p-4 border-t bg-card/30 backdrop-blur-sm">
+          {/* Message Input - Premium with Mention Autocomplete */}
+          <div className="p-4 border-t bg-card/30 backdrop-blur-sm relative">
+            {/* Mention Autocomplete Dropdown */}
+            {showMentions && (
+              <div className="absolute bottom-full left-4 right-4 mb-2">
+                {filteredUsers.length > 0 ? (
+                  <MentionAutocomplete
+                    users={filteredUsers}
+                    selectedIndex={selectedMentionIndex}
+                    onSelect={handleMentionSelect}
+                    query={mentionQuery}
+                  />
+                ) : (
+                  /* Empty State - Kullanıcı bulunamadı */
+                  <div className="w-72 bg-popover border border-border rounded-lg shadow-xl p-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">
+                        "{mentionQuery}" ile eşleşen kullanıcı bulunamadı
+                      </p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">
+                        İsim veya ID ile arayabilirsiniz
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className="flex items-center gap-3">
               <Input
-                placeholder="Mesajınızı yazın..."
+                ref={messageInputRef}
+                placeholder="Mesajınızı yazın... (@mention için @ yazın)"
                 value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                onChange={handleMessageInputChange}
+                onKeyDown={handleMessageInputKeyDown}
                 className="flex-1 h-11 bg-background border-border/50 focus-visible:ring-primary/20 shadow-sm"
                 aria-label="Mesaj yazın"
               />
