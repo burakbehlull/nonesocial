@@ -474,21 +474,156 @@ export default function Room() {
             </div>
           </div>
 
-          {/* Video Grid - Removed for socket audio */}
+          {/* Voice Chat Users */}
           <div className="flex-1 overflow-auto scrollbar-thin p-4">
-            <div className="text-center text-sm text-muted-foreground">
-              {isInCall ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Mic className="w-8 h-8 text-primary" />
-                  </div>
-                  <p>Sesli sohbet aktif</p>
-                  <p className="text-xs">{users.filter(u => u.inCall).length} kişi çağrıda</p>
-                </div>
-              ) : (
-                <p>Çağrıya katılmadınız</p>
-              )}
+            {/* Header - Her zaman göster */}
+            <div className="flex flex-col items-center gap-3 pb-3 border-b border-border/50 mb-4">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                users.filter(u => u.inCall).length > 0 
+                  ? 'bg-primary/10' 
+                  : 'bg-muted/20'
+              }`}>
+                <Mic className={`w-8 h-8 ${
+                  users.filter(u => u.inCall).length > 0 
+                    ? 'text-primary animate-pulse' 
+                    : 'text-muted-foreground/40'
+                }`} />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold">Sesli Sohbet</p>
+                <p className="text-xs text-muted-foreground">
+                  {users.filter(u => u.inCall).length} kişi çağrıda
+                </p>
+              </div>
             </div>
+
+            {/* Çağrıdaki kullanıcılar */}
+            {users.filter(u => u.inCall).length > 0 ? (
+              <div className="space-y-3">
+                {/* Kendin (eğer çağrıdaysan) - ÖNCELİKLİ */}
+                {isInCall && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2 px-1">
+                      Sen
+                    </p>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border-2 border-primary/30">
+                      <Avatar className="h-11 w-11 border-2 border-primary ring-2 ring-primary/20">
+                        <AvatarFallback className="text-sm font-bold bg-primary/30">
+                          {(users.find(u => u.id === currentUserId)?.name || 'S')[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {users.find(u => u.id === currentUserId)?.role === 'owner' && (
+                            <Crown className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />
+                          )}
+                          <span className="text-sm font-semibold truncate">
+                            {users.find(u => u.id === currentUserId)?.name}
+                          </span>
+                        </div>
+                        <code className="text-[9px] text-muted-foreground/70 font-mono">
+                          {currentUserId?.slice(0, 8)}
+                        </code>
+                      </div>
+                      
+                      {/* Mikrofon Kontrolü - Sadece kendin için */}
+                      <button
+                        onClick={toggleAudio}
+                        className={`p-2.5 rounded-full transition-all ${
+                          audioEnabled 
+                            ? 'bg-success hover:bg-success/80 shadow-lg shadow-success/20' 
+                            : 'bg-destructive hover:bg-destructive/80 shadow-lg shadow-destructive/20'
+                        }`}
+                      >
+                        {audioEnabled ? (
+                          <Mic className="w-5 h-5 text-white" />
+                        ) : (
+                          <MicOff className="w-5 h-5 text-white" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Diğer kullanıcılar (çağrıdakiler) */}
+                {users.filter(u => u.inCall && u.id !== currentUserId).length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-2 px-1">
+                      Diğer Katılımcılar
+                    </p>
+                    <div className="space-y-2">
+                      {users.filter(u => u.inCall && u.id !== currentUserId).map((user) => (
+                        <div 
+                          key={user.id}
+                          className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-all"
+                        >
+                          <Avatar className="h-10 w-10 border-2 border-success/40 ring-2 ring-success/10">
+                            <AvatarFallback className="text-sm font-semibold bg-success/20">
+                              {(user.name || 'G')[0].toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              {user.role === 'owner' && (
+                                <Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" />
+                              )}
+                              <span className="text-sm font-medium truncate">
+                                {user.name}
+                              </span>
+                            </div>
+                            <code className="text-[9px] text-muted-foreground/70 font-mono">
+                              {user.id.slice(0, 8)}
+                            </code>
+                          </div>
+                          
+                          {/* Mikrofon Durumu - Read-only (başkası için) */}
+                          <div className={`p-2 rounded-full ${
+                            user.micEnabled === false // Backend'den gelecek
+                              ? 'bg-destructive/20'
+                              : 'bg-success/20'
+                          }`}>
+                            {user.micEnabled === false ? (
+                              <MicOff className="w-4 h-4 text-destructive" />
+                            ) : (
+                              <Mic className="w-4 h-4 text-success" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Kimse çağrıda değil */
+              <div className="flex flex-col items-center justify-center text-center py-8">
+                <p className="text-sm text-muted-foreground">
+                  Henüz kimse çağrıda değil
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  İlk katılan sen ol!
+                </p>
+              </div>
+            )}
+
+            {/* Çağrıya katılma butonu (eğer katılmadıysan) */}
+            {!isInCall && users.filter(u => u.inCall).length > 0 && (
+              <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/20 text-center">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Sesli sohbete katılmak için
+                </p>
+                <Button
+                  size="sm"
+                  onClick={handleJoinCall}
+                  className="bg-success hover:bg-success/90 text-success-foreground gap-2 shadow-premium"
+                >
+                  <PhoneIncoming className="w-4 h-4" />
+                  Çağrıya Katıl
+                </Button>
+              </div>
+            )}
           </div>
         </aside>
 
