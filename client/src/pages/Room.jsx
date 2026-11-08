@@ -44,10 +44,10 @@ export default function Room() {
     messages,
     users: storeUsers, // Store'dan gelen users'ı storeUsers olarak al
     isOwner,
-    currentUserId,
+    currentUserId: storeCurrentUserId, // Store'dan gelen ID (kullanmayacağız)
     setRoomInfo,
     setIsOwner,
-    setCurrentUserId,
+    setCurrentUserId: setStoreCurrentUserId,
     setUsers,
     addMessage,
     clearRoom
@@ -61,6 +61,9 @@ export default function Room() {
     joinCall,
     leaveCall
   } = useSocketAudio(roomId);
+  
+  // Her zaman localStorage'dan currentUserId al (tek kaynak)
+  const currentUserId = localStorage.getItem('userId');
 
   useEffect(() => {
     const socketInstance = getSocket();
@@ -75,9 +78,9 @@ export default function Room() {
 
       setIsOwner(infoResponse.isOwner);
       
-      // Backend'den gelen userId'yi kullan (localStorage'dan)
+      // Store'a da kaydet (ama kullanmayacağız, sadece backward compatibility için)
       const userId = localStorage.getItem('userId');
-      setCurrentUserId(userId);
+      setStoreCurrentUserId(userId);
       
       console.log('👤 Current User ID:', userId);
 
@@ -377,6 +380,22 @@ export default function Room() {
                 audioEnabled={audioEnabled}
                 isInCall={isInCall}
               />
+              
+              {/* Debug: ID Kontrolü */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mt-2 p-2 bg-yellow-500/10 rounded text-[9px] font-mono space-y-0.5">
+                  <div className="font-bold text-yellow-600 dark:text-yellow-400">SOL PANEL (Üyeler)</div>
+                  <div>currentUserId: <span className="text-green-600">{currentUserId?.slice(0, 12)}</span></div>
+                  <div>users.length: {users.length}</div>
+                  <div className="text-[8px] opacity-70">
+                    {users.map((u, i) => (
+                      <div key={i}>
+                        {i+1}. {u.id.slice(0, 8)} {u.id === currentUserId ? '✓SEN' : ''}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -473,6 +492,22 @@ export default function Room() {
             </div>
             
             <div className="space-y-2">
+              {/* Debug: User List */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mb-2 p-2 bg-blue-500/10 rounded text-[9px] font-mono space-y-1">
+                  <div className="font-bold text-blue-600 dark:text-blue-400">SAĞ PANEL (Katılımcılar)</div>
+                  <div>currentUserId: <span className="text-green-600">{currentUserId?.slice(0, 12)}</span></div>
+                  <div>users.length: {users.length}</div>
+                  <div className="mt-1 pt-1 border-t border-blue-500/20 text-[8px] space-y-0.5">
+                    {users.map((u, i) => (
+                      <div key={i} className={u.id === currentUserId ? 'text-green-600 font-bold' : ''}>
+                        {i+1}. {u.name} | {u.id.slice(0, 10)} {u.id === currentUserId ? '✓SEN' : ''}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {users.map((user) => {
                 const isSelf = user.id === currentUserId;
                 const userIsOwner = user.role === 'owner';

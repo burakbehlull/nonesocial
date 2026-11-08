@@ -89,7 +89,12 @@ const UserBubbles = ({
     usersCount: users.length,
     currentUserId,
     currentUserInCall,
-    users: users.map(u => ({ id: u.id, name: u.name, inCall: u.inCall }))
+    users: users.map(u => ({ 
+      id: u.id, 
+      name: u.name, 
+      inCall: u.inCall,
+      isCurrentUser: u.id === currentUserId // ← BU KONTROLÜ EKLEDİK
+    }))
   });
 
   const getUserCallStatus = (userId) => {
