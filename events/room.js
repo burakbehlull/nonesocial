@@ -714,21 +714,24 @@ export default (io, socket) => {
 
   // ===== Socket Audio Events =====
 
-  // Audio data - Ses verisini çağrıdaki diğer kullanıcılara ilet
+  // Audio data - Ses verisini ODADAKİ BÜTÜN KULLANICILARA ilet
   socket.on('audio-data', ({ roomId, audioData }) => {
     const room = rooms[roomId];
     
     // Güvenlik kontrolleri
-    if (!room || !room.members[socket.userId] || !room.members[socket.userId].inCall) {
-      return; // Çağrıda değilse ses verisi gönderme
+    if (!room || !room.members[socket.userId]) {
+      return; // Odada değilse ses verisi gönderme
     }
 
-    // Sadece çağrıdaki diğer kullanıcılara gönder
-    const usersInCall = Object.keys(room.members).filter(
-      userId => userId !== socket.userId && room.members[userId].inCall
+    // ❗ ÖNEMLI: Çağrıda olup olmama kontrolü YOK
+    // Odadaki BÜTÜN kullanıcılara (kendisi hariç) gönder
+    const allOtherUsers = Object.keys(room.members).filter(
+      userId => userId !== socket.userId
     );
 
-    usersInCall.forEach(targetUserId => {
+    console.log(`🔊 Ses dağıtımı: ${socket.userId} → ${allOtherUsers.length} kullanıcı (tüm oda)`);
+
+    allOtherUsers.forEach(targetUserId => {
       const targetSocketId = userSockets.get(targetUserId);
       if (targetSocketId) {
         io.to(targetSocketId).emit('audio-data', {

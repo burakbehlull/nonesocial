@@ -65,28 +65,27 @@ const UserBubble = ({ user, isInCall, hasAudio, isCurrentUser }) => {
 const UserBubbles = ({ 
   users = [], 
   currentUserId, 
-  localStream,
   audioEnabled,
-  peers 
+  isInCall: currentUserInCall = false
 }) => {
   const getUserCallStatus = (userId) => {
+    // Kullanıcının inCall bilgisi backend'den geliyor
+    const user = users.find(u => u.id === userId);
+    
     if (userId === currentUserId) {
       return {
-        isInCall: !!localStream,
+        isInCall: currentUserInCall,
         hasAudio: audioEnabled
       };
     }
     
     return {
-      isInCall: !!peers[userId],
-      hasAudio: !!peers[userId]
+      isInCall: user?.inCall || false,
+      hasAudio: user?.inCall || false // Çağrıdaysa ses var kabul et
     };
   };
 
-  const usersInCallCount = users.filter(user => {
-    const { isInCall } = getUserCallStatus(user.id);
-    return isInCall;
-  }).length;
+  const usersInCallCount = users.filter(user => user.inCall || (user.id === currentUserId && currentUserInCall)).length;
 
   return (
     <div className="space-y-3">

@@ -348,6 +348,7 @@ export default function Room() {
                 users={users}
                 currentUserId={currentUserId}
                 audioEnabled={audioEnabled}
+                isInCall={isInCall}
               />
             </div>
           </div>

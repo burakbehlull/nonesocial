@@ -46,8 +46,10 @@ export const useSocketAudio = (roomId) => {
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
       
       processor.onaudioprocess = (e) => {
-        // Mikrofon kapalıysa veri gönderme
-        if (!audioTrack.enabled || !socket.current || !inCall) return;
+        const audioTrack = localStreamRef.current?.getAudioTracks()[0];
+        
+        // Mikrofon kapalıysa veya çağrıda değilsek veri gönderme
+        if (!audioTrack || !audioTrack.enabled || !socket.current) return;
         
         const inputData = e.inputBuffer.getChannelData(0);
         
@@ -76,7 +78,7 @@ export const useSocketAudio = (roomId) => {
       console.error('❌ Mikrofon hatası:', error);
       throw error;
     }
-  }, [roomId, inCall]);
+  }, [roomId]);
 
   // Remote ses çal
   const playRemoteAudio = useCallback((userId, audioData) => {
@@ -216,10 +218,8 @@ export const useSocketAudio = (roomId) => {
 
     // Audio data geldi (başka kullanıcıdan)
     const handleAudioData = ({ userId, audioData }) => {
-      // Sadece çağrıdaysak sesi çal
-      if (inCall) {
-        playRemoteAudio(userId, audioData);
-      }
+      // Sesi çal (çağrıda olup olmama önemli değil, backend kontrol ediyor)
+      playRemoteAudio(userId, audioData);
     };
 
     // User left
@@ -265,7 +265,7 @@ export const useSocketAudio = (roomId) => {
       // Cleanup
       leaveCall();
     };
-  }, [roomId, inCall, playRemoteAudio, leaveCall]);
+  }, [roomId, playRemoteAudio, leaveCall]);
 
   return {
     audioEnabled,
