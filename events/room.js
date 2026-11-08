@@ -827,7 +827,7 @@ export default (io, socket) => {
     const room = rooms[roomId];
     if (!room) return [];
     
-    return Object.entries(room.members)
+    const activeUsers = Object.entries(room.members)
       .filter(([_, member]) => !member.disconnectedAt) // Only active users
       .map(([userId, member]) => ({
         id: userId,
@@ -835,5 +835,22 @@ export default (io, socket) => {
         role: userId === room.ownerId ? 'owner' : 'member',
         inCall: member.inCall || false // Çağrıda olup olmadığı
       }));
+    
+    // ⚠️ DEBUG: Log active users
+    if (activeUsers.length > 1) {
+      logger.warn({
+        type: 'MULTIPLE_USERS_IN_ROOM',
+        roomId,
+        count: activeUsers.length,
+        userIds: activeUsers.map(u => ({ id: u.id, name: u.name, inCall: u.inCall })),
+        allMembers: Object.keys(room.members).map(userId => ({
+          userId,
+          disconnectedAt: room.members[userId].disconnectedAt,
+          socketId: room.members[userId].socketId
+        }))
+      });
+    }
+    
+    return activeUsers;
   }
 };

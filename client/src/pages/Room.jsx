@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getSocket } from '@services/socket';
@@ -55,20 +55,81 @@ export default function Room() {
 
   const {
     audioEnabled,
-    users, // Socket Audio'dan gelen gerçek zamanlı users
+    users: rawUsers, // Socket Audio'dan gelen gerçek zamanlı users
     inCall: isInCall,
     toggleAudio,
     joinCall,
     leaveCall
   } = useSocketAudio(roomId);
   
+  // ⚠️ DUPLICATE FIX: Aynı currentUserId ile birden fazla user varsa sadece birini al
+  const users = useMemo(() => {
+    if (!rawUsers || rawUsers.length === 0) return [];
+    
+    // currentUserId'li user'ı bul
+    const myUsers = rawUsers.filter(u => u.id === currentUserId);
+    const otherUsers = rawUsers.filter(u => u.id !== currentUserId);
+    
+    if (myUsers.length > 1) {
+      console.warn('⚠️ DUPLICATE USER DETECTED!', {
+        currentUserId,
+        duplicates: myUsers.map(u => ({ id: u.id, name: u.name, inCall: u.inCall }))
+      });
+      // Sadece ilkini al (veya inCall olanı tercih et)
+      const preferredUser = myUsers.find(u => u.inCall) || myUsers[0];
+      return [preferredUser, ...otherUsers];
+    }
+    
+    return rawUsers;
+  }, [rawUsers, currentUserId]);
+  
   // Her zaman localStorage'dan currentUserId al (tek kaynak)
   const currentUserId = localStorage.getItem('userId');
   
   // Prevent double initialization in React Strict Mode
   const initialized = useRef(false);
+  const [socketReady, setSocketReady] = useState(false);
+
+  // Socket'in hazır olmasını bekle
+  useEffect(() => {
+    const socketInstance = getSocket();
+    setSocket(socketInstance);
+    
+    // Eğer userId varsa socket hazır
+    if (localStorage.getItem('userId')) {
+      console.log('✅ Socket ready with userId:', localStorage.getItem('userId'));
+      setSocketReady(true);
+    } else {
+      // userId gelene kadar bekle
+      console.log('⏳ Waiting for userId from auth-token...');
+      const checkUserId = setInterval(() => {
+        if (localStorage.getItem('userId')) {
+          console.log('✅ UserId received:', localStorage.getItem('userId'));
+          setSocketReady(true);
+          clearInterval(checkUserId);
+        }
+      }, 100);
+      
+      // Timeout: 5 saniye sonra yine de devam et
+      setTimeout(() => {
+        clearInterval(checkUserId);
+        if (!localStorage.getItem('userId')) {
+          console.error('❌ UserId timeout! Continuing anyway...');
+          setSocketReady(true);
+        }
+      }, 5000);
+      
+      return () => clearInterval(checkUserId);
+    }
+  }, []);
 
   useEffect(() => {
+    // Socket hazır değilse bekle
+    if (!socketReady) {
+      console.log('⏳ Socket not ready yet...');
+      return;
+    }
+    
     // React Strict Mode double render protection
     if (initialized.current) {
       console.log('⚠️ useEffect already ran, skipping...');
@@ -77,7 +138,6 @@ export default function Room() {
     initialized.current = true;
 
     const socketInstance = getSocket();
-    setSocket(socketInstance);
 
     socketInstance.emit('getRoomInfo', { roomId }, (infoResponse) => {
       if (!infoResponse.success) {
@@ -146,7 +206,7 @@ export default function Room() {
       // Çünkü: Strict Mode cleanup sonrası tekrar çalışınca
       // false oluyor ve duplicate engeli çalışmıyor!
     };
-  }, [roomId]);
+  }, [roomId, socketReady]); // ← socketReady dependency eklendi
 
   const handleSendMessage = () => {
     if (!messageInput.trim() || !socket) return;
