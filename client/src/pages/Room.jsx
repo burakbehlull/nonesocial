@@ -224,13 +224,16 @@ export default function Room() {
     try {
       toast.loading('Mikrofon izni isteniyor...', { id: 'join-call' });
       
-      // Mikrofon izni al, kapalı başlat
-      const stream = await initializeMedia(true); // true = muted
+      // Mikrofon izni al, AÇIK başlat (eski davranış)
+      const stream = await initializeMedia(false); // false = mikrofon açık
       setIsInCall(true);
       
-      toast.success('Çağrıya katıldınız! Mikrofonu açmak için mikrofon butonuna basın.', { 
+      // Backend'e çağrıya katıldığını bildir
+      socket?.emit('join-call', { roomId });
+      
+      toast.success('Çağrıya katıldınız! Mikrofonunuz açık.', { 
         id: 'join-call',
-        duration: 3000 
+        duration: 2000 
       });
     } catch (error) {
       toast.error('Mikrofon erişimi reddedildi', { id: 'join-call' });
@@ -239,6 +242,9 @@ export default function Room() {
   };
 
   const handleLeaveCall = () => {
+    // Backend'e çağrıdan ayrıldığını bildir
+    socket?.emit('leave-call', { roomId });
+    
     endCall();
     setIsInCall(false);
     toast.success('Çağrıdan ayrıldınız');
@@ -462,19 +468,21 @@ export default function Room() {
               {users.map((user) => {
                 const isSelf = user.id === currentUserId;
                 const userIsOwner = user.role === 'owner';
+                const userInCall = user.inCall; // Çağrıda mı?
                 
                 return (
-                  <Card key={user.id} className="p-3 hover:shadow-premium transition-all duration-200 group">
+                  <Card key={user.id} className={`p-3 transition-all duration-200 group ${userInCall ? 'border-primary/30 bg-primary/5' : ''}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="relative">
-                          <Avatar className="h-9 w-9 border-2 border-primary/20">
+                          <Avatar className={`h-9 w-9 border-2 ${userInCall ? 'border-primary/40' : 'border-primary/20'}`}>
                             <AvatarFallback className="text-xs font-semibold bg-primary/10">
                               {(user.name || 'G')[0].toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          {isSelf && audioEnabled && (
-                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-success border-2 border-card" />
+                          {/* Online indicator - sadece çağrıdaysa göster */}
+                          {userInCall && (
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-success border-2 border-card animate-pulse-ring" />
                           )}
                         </div>
                         
@@ -484,6 +492,9 @@ export default function Room() {
                             <span className="text-sm font-medium truncate">
                               {user.name || 'Guest'}
                             </span>
+                            {!userInCall && (
+                              <span className="text-xs text-muted-foreground">(Çevrimdışı)</span>
+                            )}
                           </div>
                           {isSelf && (
                             <span className="text-xs text-muted-foreground">
@@ -492,24 +503,26 @@ export default function Room() {
                           )}
                         </div>
 
-                        {/* Mic Status */}
-                        <div>
-                          {isSelf ? (
-                            audioEnabled ? (
+                        {/* Mic Status - sadece çağrıdaysa göster */}
+                        {userInCall && (
+                          <div>
+                            {isSelf ? (
+                              audioEnabled ? (
+                                <div className="bg-success/10 p-1.5 rounded-full">
+                                  <Mic className="w-3.5 h-3.5 text-success" />
+                                </div>
+                              ) : (
+                                <div className="bg-destructive/10 p-1.5 rounded-full">
+                                  <MicOff className="w-3.5 h-3.5 text-destructive" />
+                                </div>
+                              )
+                            ) : (
                               <div className="bg-success/10 p-1.5 rounded-full">
                                 <Mic className="w-3.5 h-3.5 text-success" />
                               </div>
-                            ) : (
-                              <div className="bg-destructive/10 p-1.5 rounded-full">
-                                <MicOff className="w-3.5 h-3.5 text-destructive" />
-                              </div>
-                            )
-                          ) : (
-                            <div className="bg-success/10 p-1.5 rounded-full">
-                              <Mic className="w-3.5 h-3.5 text-success" />
-                            </div>
-                          )}
-                        </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       
                       {isOwner && !isSelf && !userIsOwner && (

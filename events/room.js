@@ -126,7 +126,8 @@ export default (io, socket) => {
       rooms[roomId].members[socket.userId] = {
         name: generateGuestName(),
         socketId: socket.id,
-        joinedAt: Date.now()
+        joinedAt: Date.now(),
+        inCall: false // Başlangıçta çağrıda değil
       };
 
       socket.join(roomId);
@@ -227,7 +228,8 @@ export default (io, socket) => {
         room.members[socket.userId] = {
           name: generateGuestName(),
           socketId: socket.id,
-          joinedAt: Date.now()
+          joinedAt: Date.now(),
+          inCall: false // Başlangıçta çağrıda değil
         };
       }
 
@@ -474,6 +476,60 @@ export default (io, socket) => {
     }
   });
 
+  // ===== Call Join/Leave Events =====
+
+  // Join call - Kullanıcı çağrıya katıldı
+  socket.on('join-call', ({ roomId }) => {
+    const room = rooms[roomId];
+    if (!room || !room.members[socket.userId]) {
+      return;
+    }
+
+    // Kullanıcıyı çağrıda olarak işaretle
+    room.members[socket.userId].inCall = true;
+
+    logger.info({
+      type: 'USER_JOINED_CALL',
+      roomId,
+      userId: socket.userId,
+      userName: room.members[socket.userId].name
+    });
+
+    // Tüm odaya bildir
+    io.to(roomId).emit('roomUsers', getUsers(roomId));
+    
+    // Çağrıya katıldığını bildir (WebRTC için)
+    socket.to(roomId).emit('user-joined-call', { 
+      userId: socket.userId 
+    });
+  });
+
+  // Leave call - Kullanıcı çağrıdan ayrıldı
+  socket.on('leave-call', ({ roomId }) => {
+    const room = rooms[roomId];
+    if (!room || !room.members[socket.userId]) {
+      return;
+    }
+
+    // Kullanıcıyı çağrıda değil olarak işaretle
+    room.members[socket.userId].inCall = false;
+
+    logger.info({
+      type: 'USER_LEFT_CALL',
+      roomId,
+      userId: socket.userId,
+      userName: room.members[socket.userId].name
+    });
+
+    // Tüm odaya bildir
+    io.to(roomId).emit('roomUsers', getUsers(roomId));
+    
+    // Çağrıdan ayrıldığını bildir
+    socket.to(roomId).emit('user-left-call', { 
+      userId: socket.userId 
+    });
+  });
+
   // ===== WebRTC Signaling Events with Security =====
   
   // Offer (bağlantı teklifi)
@@ -711,7 +767,8 @@ export default (io, socket) => {
       .map(([userId, member]) => ({
         id: userId,
         name: member.name,
-        role: userId === room.ownerId ? 'owner' : 'member'
+        role: userId === room.ownerId ? 'owner' : 'member',
+        inCall: member.inCall || false // Çağrıda olup olmadığı
       }));
   }
 };

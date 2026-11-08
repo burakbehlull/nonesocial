@@ -35,7 +35,7 @@ export const useWebRTC = (roomId) => {
         video: false // Kamerayı sadece kullanıcı isterse açacağız
       });
       
-      // Eğer muted başlatılacaksa mikrofonu kapat
+      // Mikrofon AÇIK başlasın (eski davranış)
       const audioTrack = stream.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = !startMuted;
@@ -47,7 +47,7 @@ export const useWebRTC = (roomId) => {
       
       localStreamRef.current = stream;
       setLocalStream(stream);
-      setAudioEnabled(!startMuted);
+      setAudioEnabled(!startMuted); // Mikrofon durumu
       setVideoEnabled(false);
       
       return stream;
@@ -245,13 +245,17 @@ export const useWebRTC = (roomId) => {
     // Room users güncellemesi
     const handleRoomUsers = (roomUsers) => {
       console.log('👥 Room users:', roomUsers.length, 'kullanıcı');
+      console.log('  🔊 Çağrıda:', roomUsers.filter(u => u.inCall).length, 'kullanıcı');
       setUsers(roomUsers);
       
-      // Local stream varsa yeni kullanıcılara bağlan
+      // Local stream varsa VE çağrıdaysak, çağrıdaki diğer kullanıcılara bağlan
       if (localStreamRef.current && socket.current) {
-        roomUsers.forEach(user => {
+        // Sadece çağrıdaki kullanıcılarla peer connection kur
+        const usersInCall = roomUsers.filter(u => u.inCall);
+        
+        usersInCall.forEach(user => {
           if (user.id !== socket.current.id && !peerConnections.current[user.id]) {
-            console.log('🎯 Bağlanılıyor:', user.name, '(' + user.id + ')');
+            console.log('🎯 Bağlanılıyor:', user.name, '(' + user.id + ') [ÇAĞRİDA]');
             
             const pc = createPeerConnection(user.id);
             
@@ -267,6 +271,15 @@ export const useWebRTC = (roomId) => {
                 });
               })
               .catch(err => console.error('❌ Offer hatası:', err));
+          }
+        });
+        
+        // Çağrıdan ayrılan kullanıcılarla bağlantıyı kes
+        Object.keys(peerConnections.current).forEach(userId => {
+          const userStillInCall = usersInCall.find(u => u.id === userId);
+          if (!userStillInCall) {
+            console.log('📴 Çağrıdan ayrıldı, bağlantı kesiliyor:', userId);
+            removePeerConnection(userId);
           }
         });
       }
@@ -352,6 +365,35 @@ export const useWebRTC = (roomId) => {
       removePeerConnection(userId);
     };
 
+    // User joined call - Yeni kullanıcı çağrıya katıldı
+    const handleUserJoinedCall = ({ userId }) => {
+      console.log('📞 Kullanıcı çağrıya katıldı:', userId);
+      
+      // Eğer biz de çağrıdaysak bu kullanıcıya bağlan
+      if (localStreamRef.current && socket.current && !peerConnections.current[userId]) {
+        console.log('🎯 Yeni çağrı katılımcısına bağlanılıyor:', userId);
+        
+        const pc = createPeerConnection(userId);
+        
+        pc.createOffer()
+          .then(offer => pc.setLocalDescription(offer))
+          .then(() => {
+            socket.current.emit('webrtc-offer', {
+              to: userId,
+              offer: pc.localDescription,
+              roomId
+            });
+          })
+          .catch(err => console.error('❌ Auto-connect hatası:', err));
+      }
+    };
+
+    // User left call - Kullanıcı çağrıdan ayrıldı
+    const handleUserLeftCall = ({ userId }) => {
+      console.log('📴 Kullanıcı çağrıdan ayrıldı:', userId);
+      removePeerConnection(userId);
+    };
+
     // Call ended
     const handleCallEnded = ({ from }) => {
       console.log('📴 Arama bitti:', from);
@@ -364,6 +406,8 @@ export const useWebRTC = (roomId) => {
     socket.current.on('webrtc-answer', handleAnswer);
     socket.current.on('ice-candidate', handleIceCandidate);
     socket.current.on('userLeft', handleUserLeft);
+    socket.current.on('user-joined-call', handleUserJoinedCall);
+    socket.current.on('user-left-call', handleUserLeftCall);
     socket.current.on('call-ended', handleCallEnded);
 
     return () => {
@@ -373,6 +417,8 @@ export const useWebRTC = (roomId) => {
         socket.current.off('webrtc-answer', handleAnswer);
         socket.current.off('ice-candidate', handleIceCandidate);
         socket.current.off('userLeft', handleUserLeft);
+        socket.current.off('user-joined-call', handleUserJoinedCall);
+        socket.current.off('user-left-call', handleUserLeftCall);
         socket.current.off('call-ended', handleCallEnded);
       }
     };
