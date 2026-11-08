@@ -12,7 +12,9 @@ export const initSocket = () => {
     // Get or generate auth token
     let authToken = localStorage.getItem('authToken');
     
-    console.log('🔌 Initializing socket with token:', authToken ? authToken.slice(0, 20) + '...' : 'null');
+    console.log('🔌 Initializing socket...');
+    console.log('   📦 authToken from localStorage:', authToken ? authToken.slice(0, 30) + '...' : 'NULL');
+    console.log('   🆔 userId from localStorage:', localStorage.getItem('userId'));
     
     socket = io(SERVER_URL, {
       transports: ['websocket', 'polling'],
@@ -40,8 +42,14 @@ export const initSocket = () => {
 
     // Receive auth token from server (for new users)
     socket.on('auth-token', ({ token, userId, sessionId }) => {
-      console.log('🔑 Received NEW auth token:', { userId, sessionId });
       const oldUserId = localStorage.getItem('userId');
+      const oldToken = localStorage.getItem('authToken');
+      
+      console.log('🔑 Received NEW auth token from server');
+      console.log('   Old userId:', oldUserId || 'NULL');
+      console.log('   New userId:', userId);
+      console.log('   Old token:', oldToken ? oldToken.slice(0, 20) + '...' : 'NULL');
+      console.log('   New token:', token.slice(0, 20) + '...');
       
       localStorage.setItem('authToken', token);
       localStorage.setItem('userId', userId);
@@ -49,8 +57,10 @@ export const initSocket = () => {
       
       // ⚠️ UYARI: Eğer token değiştiyse, yeni token ile reconnect et
       if (oldUserId && oldUserId !== userId) {
-        console.warn('⚠️ UserId changed! Old:', oldUserId, 'New:', userId);
-        console.warn('   This should NOT happen! Possible duplicate user bug.');
+        console.error('🚨 DUPLICATE USER BUG DETECTED!');
+        console.error('   This means socket reconnected with different userId!');
+        console.error('   Old:', oldUserId, '→ New:', userId);
+        console.error('   This will create duplicate users in backend!');
       }
     });
 
