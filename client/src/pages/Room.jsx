@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getSocket } from '@services/socket';
@@ -64,8 +64,18 @@ export default function Room() {
   
   // Her zaman localStorage'dan currentUserId al (tek kaynak)
   const currentUserId = localStorage.getItem('userId');
+  
+  // Prevent double initialization in React Strict Mode
+  const initialized = useRef(false);
 
   useEffect(() => {
+    // React Strict Mode double render protection
+    if (initialized.current) {
+      console.log('⚠️ useEffect already ran, skipping...');
+      return;
+    }
+    initialized.current = true;
+
     const socketInstance = getSocket();
     setSocket(socketInstance);
 
@@ -130,6 +140,11 @@ export default function Room() {
       socketInstance.off('banned');
       socketInstance.off('nameChanged');
       socketInstance.off('roomClosed');
+      
+      // ❌ KALDIRDIK: initialized'ı sıfırlama
+      // initialized.current = false;
+      // Çünkü: Strict Mode cleanup sonrası tekrar çalışınca
+      // false oluyor ve duplicate engeli çalışmıyor!
     };
   }, [roomId]);
 

@@ -12,6 +12,8 @@ export const initSocket = () => {
     // Get or generate auth token
     let authToken = localStorage.getItem('authToken');
     
+    console.log('🔌 Initializing socket with token:', authToken ? authToken.slice(0, 20) + '...' : 'null');
+    
     socket = io(SERVER_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -24,6 +26,7 @@ export const initSocket = () => {
 
     socket.on('connect', () => {
       console.log('✅ Connected to server:', socket.id);
+      console.log('   🔑 Using userId:', localStorage.getItem('userId'));
     });
 
     socket.on('disconnect', () => {
@@ -37,10 +40,18 @@ export const initSocket = () => {
 
     // Receive auth token from server (for new users)
     socket.on('auth-token', ({ token, userId, sessionId }) => {
-      console.log('🔑 Received auth token:', { userId, sessionId });
+      console.log('🔑 Received NEW auth token:', { userId, sessionId });
+      const oldUserId = localStorage.getItem('userId');
+      
       localStorage.setItem('authToken', token);
       localStorage.setItem('userId', userId);
       localStorage.setItem('sessionId', sessionId);
+      
+      // ⚠️ UYARI: Eğer token değiştiyse, yeni token ile reconnect et
+      if (oldUserId && oldUserId !== userId) {
+        console.warn('⚠️ UserId changed! Old:', oldUserId, 'New:', userId);
+        console.warn('   This should NOT happen! Possible duplicate user bug.');
+      }
     });
 
     // Handle errors from server

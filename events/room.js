@@ -224,7 +224,40 @@ export default (io, socket) => {
       if (existingMember) {
         // Update socket ID for reconnection
         existingMember.socketId = socket.id;
+        logger.info({
+          type: 'USER_RECONNECTED_TO_ROOM',
+          roomId,
+          userId: socket.userId,
+          previousSocketId: existingMember.socketId,
+          newSocketId: socket.id
+        });
       } else {
+        // ⚠️ DUPLICATE CLEANUP: Aynı odada eski disconnected member'ları temizle
+        const duplicateMembers = Object.entries(room.members)
+          .filter(([memberId, member]) => 
+            memberId !== socket.userId && 
+            member.disconnectedAt && 
+            Date.now() - member.disconnectedAt < 5000 // Son 5 saniye içinde disconnect olduysa
+          );
+        
+        if (duplicateMembers.length > 0) {
+          logger.warn({
+            type: 'CLEANING_DUPLICATE_MEMBERS',
+            roomId,
+            newUserId: socket.userId,
+            duplicates: duplicateMembers.map(([id]) => id)
+          });
+          duplicateMembers.forEach(([memberId]) => {
+            delete room.members[memberId];
+          });
+        }
+        
+        logger.info({
+          type: 'NEW_USER_JOINING_ROOM',
+          roomId,
+          userId: socket.userId,
+          existingMembers: Object.keys(room.members)
+        });
         room.members[socket.userId] = {
           name: generateGuestName(),
           socketId: socket.id,
