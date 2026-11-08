@@ -49,11 +49,10 @@ const UserBubble = ({ user, isInCall, hasAudio, isCurrentUser }) => {
             className="text-[9px] text-muted-foreground/60 font-mono bg-muted/20 px-1.5 py-0.5 rounded cursor-pointer hover:bg-muted/40 transition-colors"
             onClick={() => {
               navigator.clipboard.writeText(user.id);
-              // Mini feedback - burada toast kullanmak yerine daha subtle bir şey yapabiliriz
             }}
             title={`ID: ${user.id} (Kopyalamak için tıkla)`}
           >
-            {user.id.slice(0, 6)}
+            {user.id.slice(0, 8)}
           </code>
           <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-[9px] px-2 py-1 rounded shadow-lg opacity-0 group-hover/id:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
             Kopyala
