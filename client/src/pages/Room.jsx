@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getSocket } from '@services/socket';
-import { useWebRTC } from '@hooks/useWebRTC';
+import { useSocketAudio } from '@hooks/useSocketAudio';
 import { useRoomStore } from '@store/roomStore';
 import { useTheme } from '@contexts/ThemeContext';
-import VideoGrid from '@components/VideoGrid';
 import UserBubbles from '@components/UserBubbles';
 import ChatMessages from '@components/ChatMessages';
 import { Card } from '@components/ui/card';
@@ -17,7 +16,7 @@ import { IconButton } from '@components/ui/icon-button';
 import { Badge } from '@components/ui/badge';
 import { 
   Copy, Settings, Users, Send, 
-  Mic, MicOff, Video, VideoOff, 
+  Mic, MicOff, 
   PhoneOff, Moon, Sun, UserX,
   PhoneIncoming, PhoneOutgoing, Crown,
   MessageSquare, MonitorUp
@@ -36,7 +35,6 @@ export default function Room() {
   const [userName, setUserName] = useState('');
   const [showNameModal, setShowNameModal] = useState(false);
   const [messageInput, setMessageInput] = useState('');
-  const [isInCall, setIsInCall] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [editingUserName, setEditingUserName] = useState('');
@@ -56,16 +54,13 @@ export default function Room() {
   } = useRoomStore();
 
   const {
-    peers,
-    localStream,
     audioEnabled,
-    videoEnabled,
-    users, // WebRTC'den gelen gerçek zamanlı users
-    initializeMedia,
+    users, // Socket Audio'dan gelen gerçek zamanlı users
+    inCall: isInCall,
     toggleAudio,
-    toggleVideo,
-    endCall
-  } = useWebRTC(roomId);
+    joinCall,
+    leaveCall
+  } = useSocketAudio(roomId);
 
   useEffect(() => {
     const socketInstance = getSocket();
@@ -224,12 +219,8 @@ export default function Room() {
     try {
       toast.loading('Mikrofon izni isteniyor...', { id: 'join-call' });
       
-      // Mikrofon izni al, AÇIK başlat (eski davranış)
-      const stream = await initializeMedia(false); // false = mikrofon açık
-      setIsInCall(true);
-      
-      // Backend'e çağrıya katıldığını bildir
-      socket?.emit('join-call', { roomId });
+      // Socket Audio ile çağrıya katıl
+      await joinCall();
       
       toast.success('Çağrıya katıldınız! Mikrofonunuz açık.', { 
         id: 'join-call',
@@ -242,11 +233,7 @@ export default function Room() {
   };
 
   const handleLeaveCall = () => {
-    // Backend'e çağrıdan ayrıldığını bildir
-    socket?.emit('leave-call', { roomId });
-    
-    endCall();
-    setIsInCall(false);
+    leaveCall();
     toast.success('Çağrıdan ayrıldınız');
   };
 
@@ -360,23 +347,26 @@ export default function Room() {
               <UserBubbles
                 users={users}
                 currentUserId={currentUserId}
-                localStream={localStream}
                 audioEnabled={audioEnabled}
-                peers={peers}
               />
             </div>
           </div>
 
-          {/* Video Grid */}
-          <div className="flex-1 overflow-auto scrollbar-thin">
-            <VideoGrid
-              localStream={localStream}
-              peers={peers}
-              users={users}
-              currentUserId={currentUserId}
-              audioEnabled={audioEnabled}
-              videoEnabled={videoEnabled}
-            />
+          {/* Video Grid - Removed for socket audio */}
+          <div className="flex-1 overflow-auto scrollbar-thin p-4">
+            <div className="text-center text-sm text-muted-foreground">
+              {isInCall ? (
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Mic className="w-8 h-8 text-primary" />
+                  </div>
+                  <p>Sesli sohbet aktif</p>
+                  <p className="text-xs">{users.filter(u => u.inCall).length} kişi çağrıda</p>
+                </div>
+              ) : (
+                <p>Çağrıya katılmadınız</p>
+              )}
+            </div>
           </div>
         </aside>
 
@@ -436,16 +426,6 @@ export default function Room() {
                     className="shadow-premium-lg"
                   >
                     {audioEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-                  </IconButton>
-
-                  <IconButton
-                    variant={videoEnabled ? "primary" : "destructive"}
-                    size="lg"
-                    onClick={handleToggleVideo}
-                    tooltip={videoEnabled ? 'Kamerayı kapat' : 'Kamerayı aç'}
-                    className="shadow-premium-lg"
-                  >
-                    {videoEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
                   </IconButton>
                 </div>
               </div>

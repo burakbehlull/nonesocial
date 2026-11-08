@@ -712,6 +712,35 @@ export default (io, socket) => {
     });
   });
 
+  // ===== Socket Audio Events =====
+
+  // Audio data - Ses verisini çağrıdaki diğer kullanıcılara ilet
+  socket.on('audio-data', ({ roomId, audioData }) => {
+    const room = rooms[roomId];
+    
+    // Güvenlik kontrolleri
+    if (!room || !room.members[socket.userId] || !room.members[socket.userId].inCall) {
+      return; // Çağrıda değilse ses verisi gönderme
+    }
+
+    // Sadece çağrıdaki diğer kullanıcılara gönder
+    const usersInCall = Object.keys(room.members).filter(
+      userId => userId !== socket.userId && room.members[userId].inCall
+    );
+
+    usersInCall.forEach(targetUserId => {
+      const targetSocketId = userSockets.get(targetUserId);
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('audio-data', {
+          userId: socket.userId,
+          audioData
+        });
+      }
+    });
+  });
+
+  // ===== End Socket Audio Events =====
+
   // ===== End WebRTC Signaling =====
 
   // Handle disconnect
