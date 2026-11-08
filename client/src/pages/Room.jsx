@@ -282,6 +282,29 @@ export default function Room() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* User ID Badge - Premium */}
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span className="text-xs font-medium text-muted-foreground">ID:</span>
+            </div>
+            <code className="text-xs font-mono font-semibold text-foreground bg-muted/50 px-2 py-0.5 rounded">
+              {currentUserId?.slice(0, 8) || '--------'}
+            </code>
+            <IconButton
+              variant="ghost"
+              size="xs"
+              className="h-6 w-6"
+              onClick={() => {
+                copyToClipboard(currentUserId);
+                toast.success('Kullanıcı ID\'niz kopyalandı!', { duration: 2000 });
+              }}
+              tooltip="ID'yi kopyala"
+            >
+              <Copy className="w-3 h-3" />
+            </IconButton>
+          </div>
+
           <IconButton
             variant="ghost"
             onClick={toggleTheme}
@@ -481,11 +504,29 @@ export default function Room() {
                               <span className="text-xs text-muted-foreground">(Odada)</span>
                             )}
                           </div>
-                          {isSelf && (
-                            <span className="text-xs text-muted-foreground">
-                              Sen
-                            </span>
-                          )}
+                          {/* User ID - Kopyalanabilir */}
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {isSelf && (
+                              <span className="text-xs text-muted-foreground mr-1">
+                                Sen ·
+                              </span>
+                            )}
+                            <code className="text-[10px] text-muted-foreground/70 font-mono bg-muted/30 px-1 py-0.5 rounded">
+                              {user.id.slice(0, 8)}
+                            </code>
+                            <IconButton
+                              variant="ghost"
+                              size="xs"
+                              className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => {
+                                copyToClipboard(user.id);
+                                toast.success('Kullanıcı ID kopyalandı!', { duration: 1500 });
+                              }}
+                              tooltip="ID'yi kopyala"
+                            >
+                              <Copy className="w-2.5 h-2.5" />
+                            </IconButton>
+                          </div>
                         </div>
 
                         {/* Mic Status - sadece çağrıdaysa göster */}
