@@ -9,6 +9,7 @@ import eventLoader from './events/eventLoader.js';
 import logger from './utils/logger.js';
 import { socketAuthMiddleware } from './utils/auth.js';
 import { connectDB } from './utils/database.js';
+import adminRoutes from './routes/admin.js';
 
 dotenv.config();
 
@@ -76,6 +77,9 @@ const apiLimiter = rateLimit({
 });
 
 app.use('/api/', apiLimiter);
+
+// Admin routes
+app.use('/api/admin', adminRoutes);
 
 const server = http.createServer(app);
 const io = new Server(server, {
