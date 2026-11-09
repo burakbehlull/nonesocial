@@ -14,6 +14,7 @@ const ReportNew = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     category: '',
+    subject: '',
     roomId: '',
     userId: '',
     description: '',
@@ -45,6 +46,17 @@ const ReportNew = () => {
       return;
     }
 
+    if (!formData.subject.trim()) {
+      toast.error('Lütfen konu başlığı girin');
+      return;
+    }
+
+    // Oda ID veya Kullanıcı ID'den en az biri zorunlu
+    if (!formData.roomId.trim() && !formData.userId.trim()) {
+      toast.error('Lütfen Oda ID veya Kullanıcı ID girin (en az biri zorunlu)');
+      return;
+    }
+
     if (!formData.description.trim()) {
       toast.error('Lütfen açıklama girin');
       return;
@@ -69,6 +81,7 @@ const ReportNew = () => {
       // Reset form
       setFormData({
         category: '',
+        subject: '',
         roomId: '',
         userId: '',
         description: '',
@@ -211,66 +224,95 @@ const ReportNew = () => {
                   </div>
                 </div>
 
-                {/* Room ID */}
+                {/* Subject */}
                 <div className="space-y-2">
-                  <label htmlFor="roomId" className="text-sm font-semibold block">
-                    Oda ID <span className="text-muted-foreground text-xs font-normal">(Opsiyonel)</span>
+                  <label htmlFor="subject" className="text-sm font-semibold block">
+                    Konu Başlığı <span className="text-red-500">*</span>
                   </label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="roomId"
-                      placeholder="Örn: abc123xy"
-                      value={formData.roomId}
-                      onChange={(e) => setFormData({ ...formData, roomId: e.target.value })}
-                      className="flex-1"
-                    />
-                    {formData.roomId && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleCopy(formData.roomId, 'roomId')}
-                      >
-                        {copied === 'roomId' ? (
-                          <Check className="w-4 h-4 text-success" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
+                  <Input
+                    id="subject"
+                    placeholder="Örn: Odada spam yapan kullanıcı"
+                    value={formData.subject}
+                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    maxLength={100}
+                    className="flex-1"
+                    required
+                  />
                   <p className="text-xs text-muted-foreground">
-                    URL'den kopyalayın: /room/<strong>abc123xy</strong>
+                    Raporunuzu kısaca özetleyen bir başlık ({formData.subject.length}/100)
                   </p>
                 </div>
 
-                {/* User ID */}
-                <div className="space-y-2">
-                  <label htmlFor="userId" className="text-sm font-semibold block">
-                    Kullanıcı ID <span className="text-muted-foreground text-xs font-normal">(Opsiyonel)</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="userId"
-                      placeholder="Raporlamak istediğiniz kullanıcının ID'si"
-                      value={formData.userId}
-                      onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-                      className="flex-1"
-                    />
-                    {formData.userId && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleCopy(formData.userId, 'userId')}
-                      >
-                        {copied === 'userId' ? (
-                          <Check className="w-4 h-4 text-success" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </Button>
-                    )}
+                {/* Room ID & User ID - At least one required */}
+                <div className="space-y-4 p-4 rounded-lg border-2 border-orange-500/20 bg-orange-500/5">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5" />
+                    <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                      Aşağıdaki alanlardan <strong>en az birini</strong> doldurun
+                    </p>
+                  </div>
+
+                  {/* Room ID */}
+                  <div className="space-y-2">
+                    <label htmlFor="roomId" className="text-sm font-semibold block">
+                      Oda ID
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="roomId"
+                        placeholder="Örn: abc123xy"
+                        value={formData.roomId}
+                        onChange={(e) => setFormData({ ...formData, roomId: e.target.value })}
+                        className="flex-1"
+                      />
+                      {formData.roomId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleCopy(formData.roomId, 'roomId')}
+                        >
+                          {copied === 'roomId' ? (
+                            <Check className="w-4 h-4 text-success" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      URL'den kopyalayın: /room/<strong>abc123xy</strong>
+                    </p>
+                  </div>
+
+                  {/* User ID */}
+                  <div className="space-y-2">
+                    <label htmlFor="userId" className="text-sm font-semibold block">
+                      Kullanıcı ID
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="userId"
+                        placeholder="Raporlamak istediğiniz kullanıcının ID'si"
+                        value={formData.userId}
+                        onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                        className="flex-1"
+                      />
+                      {formData.userId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleCopy(formData.userId, 'userId')}
+                        >
+                          {copied === 'userId' ? (
+                            <Check className="w-4 h-4 text-success" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
