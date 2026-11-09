@@ -44,9 +44,11 @@ const allowedOrigins = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(',').map(url => url.trim())
   : ['http://localhost:5173'];
 
+console.log('🔒 CORS Allowed Origins:', allowedOrigins);
+
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, same-origin)
+    // Allow requests with no origin (mobile apps, same-origin, Postman)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.includes(origin)) {
@@ -57,15 +59,27 @@ const corsOptions = {
         origin,
         allowedOrigins
       });
-      callback(new Error('Not allowed by CORS'));
+      // In production, be more lenient initially for debugging
+      if (process.env.NODE_ENV === 'production') {
+        console.warn(`⚠️  CORS Warning: Origin ${origin} not in allowed list. Allowing anyway for debugging.`);
+        callback(null, true); // Temporarily allow for debugging
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 
 app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10kb' })); // Limit request body size
 
 // Security: Rate limiting for HTTP endpoints

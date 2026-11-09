@@ -1,5 +1,5 @@
 // API base URL - uses VITE_SERVER_URL in production, falls back to relative path in dev
-const API_BASE_URL = import.meta.env.VITE_SERVER_URL || '';
+const API_BASE_URL = (import.meta.env.VITE_SERVER_URL || '').replace(/\/$/, ''); // Remove trailing slash
 
 /**
  * Make an API request with proper URL handling
@@ -8,13 +8,16 @@ const API_BASE_URL = import.meta.env.VITE_SERVER_URL || '';
  * @returns {Promise<Response>}
  */
 export const apiRequest = async (endpoint, options = {}) => {
-  const url = `${API_BASE_URL}${endpoint}`;
+  // Ensure endpoint starts with /
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE_URL}${cleanEndpoint}`;
   
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
       ...options.headers
-    }
+    },
+    credentials: 'include' // Important for CORS with cookies
   };
 
   // Add auth token if available (for admin endpoints)
