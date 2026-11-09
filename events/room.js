@@ -826,6 +826,7 @@ export default (io, socket) => {
     
     // Güvenlik kontrolleri
     if (!room || !room.members[socket.userId]) {
+      console.log(`❌ Ses verisi reddedildi: ${socket.userId} odada değil`);
       return; // Odada değilse ses verisi gönderme
     }
 
@@ -835,7 +836,10 @@ export default (io, socket) => {
       userId => userId !== socket.userId
     );
 
-    console.log(`🔊 Ses dağıtımı: ${socket.userId} → ${allOtherUsers.length} kullanıcı (tüm oda)`);
+    const dataSize = typeof audioData === 'string' ? audioData.length : 
+                     Array.isArray(audioData) ? audioData.length : 
+                     'unknown';
+    console.log(`🔊 Ses dağıtımı: ${socket.userId.slice(0, 8)} → ${allOtherUsers.length} kullanıcı, boyut: ${dataSize}`);
 
     allOtherUsers.forEach(targetUserId => {
       const targetSocketId = userSockets.get(targetUserId);
@@ -844,6 +848,9 @@ export default (io, socket) => {
           userId: socket.userId,
           audioData
         });
+        console.log(`  📤 → ${targetUserId.slice(0, 8)}`);
+      } else {
+        console.log(`  ⚠️ → ${targetUserId.slice(0, 8)} (socket bulunamadı)`);
       }
     });
   });

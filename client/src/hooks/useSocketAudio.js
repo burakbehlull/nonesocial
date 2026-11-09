@@ -38,22 +38,39 @@ export const useSocketAudio = (roomId) => {
       
       console.log('✅ Mikrofon erişimi verildi');
       
+      // MediaRecorder için codec desteğini kontrol et
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        console.warn('⚠️ Opus desteklenmiyor, webm deneniyor...');
+        mimeType = 'audio/webm';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          console.warn('⚠️ webm desteklenmiyor, varsayılan kullanılacak');
+          mimeType = '';
+        }
+      }
+      
+      console.log('🎵 Kullanılan codec:', mimeType || 'default');
+      
       // MediaRecorder kullanarak ses kaydet (daha verimli)
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus', // Opus codec, düşük latency
+      const mediaRecorder = new MediaRecorder(stream, mimeType ? {
+        mimeType,
         audioBitsPerSecond: 48000 // Kaliteli ses
-      });
+      } : undefined);
       
       mediaRecorderRef.current = mediaRecorder;
       
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0 && audioTrack.enabled && socket.current) {
+          console.log(`📤 Ses paketi gönderiliyor: ${event.data.size} bytes`);
+          
           // Blob'u ArrayBuffer'a çevir
           event.data.arrayBuffer().then((buffer) => {
             // Base64'e encode et (socket için)
             const base64 = btoa(
               new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
             );
+            
+            console.log(`📤 Base64 boyut: ${base64.length} chars`);
             
             socket.current.emit('audio-data', {
               roomId,
@@ -66,7 +83,7 @@ export const useSocketAudio = (roomId) => {
       // 100ms chunk'lar halinde gönder (düşük latency)
       mediaRecorder.start(100);
       
-      console.log('🎵 Ses yakalama başladı (Opus codec, 48kbps)');
+      console.log('🎵 Ses yakalama başladı (100ms chunks)');
       
       return stream;
     } catch (error) {
@@ -78,6 +95,8 @@ export const useSocketAudio = (roomId) => {
   // Remote ses çal (queue sistemiyle)
   const playRemoteAudio = useCallback(async (userId, audioDataBase64) => {
     try {
+      console.log(`🔊 playRemoteAudio çağrıldı: ${userId.slice(0, 8)}`);
+      
       // Audio context yoksa oluştur
       if (!remoteAudioContextsRef.current[userId]) {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)({
@@ -99,11 +118,15 @@ export const useSocketAudio = (roomId) => {
         bytes[i] = binaryString.charCodeAt(i);
       }
       
+      console.log(`🎵 Decoded bytes: ${bytes.length}`);
+      
       // ArrayBuffer'ı AudioBuffer'a decode et
       const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
+      console.log(`✅ Audio buffer decode edildi: ${audioBuffer.duration.toFixed(3)}s, ${audioBuffer.numberOfChannels} kanal`);
       
       // Queue'ya ekle
       audioQueuesRef.current[userId].push(audioBuffer);
+      console.log(`📦 Queue'ya eklendi, toplam: ${audioQueuesRef.current[userId].length}`);
       
       // Eğer çalmıyorsa başlat
       if (!isPlayingRef.current[userId]) {
@@ -121,9 +144,12 @@ export const useSocketAudio = (roomId) => {
     const audioContext = remoteAudioContextsRef.current[userId];
     
     if (!queue || queue.length === 0) {
+      console.log(`🔇 Queue boş: ${userId.slice(0, 8)}`);
       isPlayingRef.current[userId] = false;
       return;
     }
+    
+    console.log(`▶️ Çalınıyor: ${userId.slice(0, 8)}, kalan: ${queue.length}`);
     
     isPlayingRef.current[userId] = true;
     const audioBuffer = queue.shift();
@@ -141,6 +167,7 @@ export const useSocketAudio = (roomId) => {
     
     // Bittiğinde sıradakini çal
     source.onended = () => {
+      console.log(`✅ Chunk bitti: ${userId.slice(0, 8)}`);
       playNextInQueue(userId);
     };
     
@@ -239,6 +266,7 @@ export const useSocketAudio = (roomId) => {
 
     // Audio data geldi (başka kullanıcıdan)
     const handleAudioData = ({ userId, audioData }) => {
+      console.log(`📥 Ses paketi alındı: ${userId.slice(0, 8)}, boyut: ${audioData.length} chars`);
       // Sesi çal
       playRemoteAudio(userId, audioData);
     };
