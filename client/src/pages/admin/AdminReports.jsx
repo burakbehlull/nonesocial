@@ -92,18 +92,6 @@ const AdminReports = () => {
     }
   };
 
-      if (data.success) {
-        toast.success('Durum güncellendi');
-        setShowModal(false);
-        loadReports();
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      toast.error('İşlem başarısız');
-    }
-  };
-
   const handleAction = async (actionType) => {
     const details = prompt(`${actionType} için detay girin (opsiyonel):`);
     
