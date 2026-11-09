@@ -122,7 +122,7 @@ const ChatMessages = ({ messages, currentUserId }) => {
   return (
     <div 
       ref={messagesContainerRef} 
-      className="flex-1 overflow-y-auto px-6 py-4 space-y-5 scrollbar-thin"
+      className="flex-1 overflow-y-auto px-6 py-4 space-y-3 scrollbar-thin"
     >
       {groupedMessages.map((group, groupIndex) => {
         const isOwner = group.role === 'owner';
@@ -141,9 +141,9 @@ const ChatMessages = ({ messages, currentUserId }) => {
             </Avatar>
 
             {/* Messages */}
-            <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex-1 min-w-0 space-y-0.5">
               {/* Header - Name, Badge, Time */}
-              <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex items-center gap-2 mb-1">
                 <span className="text-sm font-semibold text-foreground">
                   {group.userName || 'Guest'}
                 </span>
@@ -164,7 +164,7 @@ const ChatMessages = ({ messages, currentUserId }) => {
               </div>
 
               {/* Message Group - Premium Style with Mention Highlighting */}
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {group.messages.map((msg) => (
                   <div
                     key={msg.id}
