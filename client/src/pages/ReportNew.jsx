@@ -69,30 +69,43 @@ const ReportNew = () => {
 
     setIsSubmitting(true);
 
-    // TODO: Backend'e gönder
-    // Şimdilik console'a yazdır
-    console.log('Report submitted:', formData);
-
-    // Simulated API call
-    setTimeout(() => {
-      toast.success('Raporunuz başarıyla gönderildi!');
-      setIsSubmitting(false);
-      
-      // Reset form
-      setFormData({
-        category: '',
-        subject: '',
-        roomId: '',
-        userId: '',
-        description: '',
-        email: ''
+    try {
+      const response = await fetch('/api/reports/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
       });
 
-      // Navigate back to support after 2 seconds
-      setTimeout(() => {
-        navigate('/support');
-      }, 2000);
-    }, 1000);
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Raporunuz başarıyla gönderildi!');
+        
+        // Reset form
+        setFormData({
+          category: '',
+          subject: '',
+          roomId: '',
+          userId: '',
+          description: '',
+          email: ''
+        });
+
+        // Navigate back to support after 2 seconds
+        setTimeout(() => {
+          navigate('/support');
+        }, 2000);
+      } else {
+        toast.error(data.message || 'Rapor gönderilemedi');
+      }
+    } catch (error) {
+      console.error('Report error:', error);
+      toast.error('Sunucu hatası');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

@@ -5,6 +5,11 @@ import Home from '@pages/Home'
 import Room from '@pages/Room'
 import Support from '@pages/Support'
 import ReportNew from '@pages/ReportNew'
+import AdminLogin from '@pages/admin/AdminLogin'
+import AdminDashboard from '@pages/admin/AdminDashboard'
+import AdminUsers from '@pages/admin/AdminUsers'
+import AdminRooms from '@pages/admin/AdminRooms'
+import AdminReports from '@pages/admin/AdminReports'
 import WebRTCTest from '@pages/WebRTCTest'
 import NotFound from '@pages/NotFound'
 
@@ -50,6 +55,14 @@ function App() {
           <Route path="/room/:roomId" element={<Room />} />
           <Route path="/support" element={<Support />} />
           <Route path="/report/new" element={<ReportNew />} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/rooms" element={<AdminRooms />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
+          
           <Route path="/test" element={<WebRTCTest />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

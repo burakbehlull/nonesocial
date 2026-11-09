@@ -10,6 +10,7 @@ import logger from './utils/logger.js';
 import { socketAuthMiddleware } from './utils/auth.js';
 import { connectDB } from './utils/database.js';
 import adminRoutes from './routes/admin.js';
+import reportRoutes from './routes/report.js';
 
 dotenv.config();
 
@@ -80,6 +81,9 @@ app.use('/api/', apiLimiter);
 
 // Admin routes
 app.use('/api/admin', adminRoutes);
+
+// Report routes (public)
+app.use('/api/reports', reportRoutes);
 
 const server = http.createServer(app);
 const io = new Server(server, {

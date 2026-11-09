@@ -3,6 +3,7 @@ import Admin from '../models/Admin.js';
 import User from '../models/User.js';
 import Room from '../models/Room.js';
 import SessionLog from '../models/SessionLog.js';
+import Report from '../models/Report.js';
 import { generateAdminToken } from '../middleware/adminAuth.js';
 import { adminAuth, checkPermission, superAdminOnly } from '../middleware/adminAuth.js';
 import logger from '../utils/logger.js';
@@ -444,6 +445,289 @@ router.delete('/rooms/:roomId', adminAuth, superAdminOnly, checkPermission('dele
   } catch (error) {
     logger.error({
       type: 'ADMIN_DELETE_ROOM_ERROR',
+      error: error.message,
+      adminId: req.admin._id
+    });
+    
+    res.status(500).json({ 
+      success: false, 
+      message: 'Sunucu hatası' 
+    });
+  }
+});
+
+// ===== REPORT MANAGEMENT =====
+
+// Get all reports (with pagination and filters)
+router.get('/reports', adminAuth, checkPermission('viewReports'), async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+    const status = req.query.status; // pending, reviewed, resolved, rejected
+    const category = req.query.category;
+
+    const filter = {};
+    if (status) filter.status = status;
+    if (category) filter.category = category;
+
+    const [reports, total] = await Promise.all([
+      Report.find(filter)
+        .sort({ priority: -1, createdAt: -1 }) // High priority first
+        .skip(skip)
+        .limit(limit),
+      Report.countDocuments(filter)
+    ]);
+
+    logger.info({
+      type: 'ADMIN_REPORTS_VIEWED',
+      adminId: req.admin._id,
+      username: req.admin.username,
+      page,
+      total,
+      filter
+    });
+
+    res.json({
+      success: true,
+      reports,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    logger.error({
+      type: 'ADMIN_REPORTS_ERROR',
+      error: error.message,
+      adminId: req.admin._id
+    });
+    
+    res.status(500).json({ 
+      success: false, 
+      message: 'Sunucu hatası' 
+    });
+  }
+});
+
+// Get single report
+router.get('/reports/:id', adminAuth, checkPermission('viewReports'), async (req, res) => {
+  try {
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Rapor bulunamadı'
+      });
+    }
+
+    res.json({
+      success: true,
+      report
+    });
+
+  } catch (error) {
+    logger.error({
+      type: 'ADMIN_REPORT_GET_ERROR',
+      error: error.message,
+      adminId: req.admin._id
+    });
+    
+    res.status(500).json({ 
+      success: false, 
+      message: 'Sunucu hatası' 
+    });
+  }
+});
+
+// Update report status
+router.patch('/reports/:id/status', adminAuth, checkPermission('viewReports'), async (req, res) => {
+  try {
+    const { status, adminNotes } = req.body;
+
+    if (!['pending', 'reviewed', 'resolved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçersiz durum'
+      });
+    }
+
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Rapor bulunamadı'
+      });
+    }
+
+    report.status = status;
+    report.reviewedBy = req.admin.username;
+    report.reviewedAt = new Date();
+    if (adminNotes) report.adminNotes = adminNotes;
+
+    await report.save();
+
+    logger.info({
+      type: 'REPORT_STATUS_UPDATED',
+      reportId: report._id,
+      status,
+      adminUsername: req.admin.username
+    });
+
+    res.json({
+      success: true,
+      message: 'Rapor durumu güncellendi',
+      report
+    });
+
+  } catch (error) {
+    logger.error({
+      type: 'ADMIN_REPORT_UPDATE_ERROR',
+      error: error.message,
+      adminId: req.admin._id
+    });
+    
+    res.status(500).json({ 
+      success: false, 
+      message: 'Sunucu hatası' 
+    });
+  }
+});
+
+// Add action to report (ban user, delete room, etc.)
+router.post('/reports/:id/action', adminAuth, checkPermission('banUsers'), async (req, res) => {
+  try {
+    const { actionType, details } = req.body;
+
+    if (!['ban_user', 'delete_room', 'warning', 'no_action'].includes(actionType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçersiz aksiyon'
+      });
+    }
+
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Rapor bulunamadı'
+      });
+    }
+
+    // Perform action
+    if (actionType === 'ban_user' && report.userId) {
+      const user = await User.findOne({ userId: report.userId });
+      if (user) {
+        user.banned = {
+          isBanned: true,
+          bannedAt: new Date(),
+          bannedReason: `Report: ${report.subject}`,
+          bannedUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+          bannedBy: req.admin.username
+        };
+        await user.save();
+      }
+    } else if (actionType === 'delete_room' && report.roomId && req.admin.role === 'superadmin') {
+      await Room.deleteOne({ roomId: report.roomId });
+    }
+
+    // Add action to report
+    report.actions.push({
+      type: actionType,
+      performedBy: req.admin.username,
+      performedAt: new Date(),
+      details: details || ''
+    });
+
+    // Update status to resolved if action taken
+    if (actionType !== 'no_action') {
+      report.status = 'resolved';
+      report.reviewedBy = req.admin.username;
+      report.reviewedAt = new Date();
+    }
+
+    await report.save();
+
+    logger.warn({
+      type: 'REPORT_ACTION_PERFORMED',
+      reportId: report._id,
+      actionType,
+      adminUsername: req.admin.username
+    });
+
+    res.json({
+      success: true,
+      message: 'Aksiyon gerçekleştirildi',
+      report
+    });
+
+  } catch (error) {
+    logger.error({
+      type: 'ADMIN_REPORT_ACTION_ERROR',
+      error: error.message,
+      adminId: req.admin._id
+    });
+    
+    res.status(500).json({ 
+      success: false, 
+      message: 'Sunucu hatası' 
+    });
+  }
+});
+
+// Send response to reporter
+router.post('/reports/:id/respond', adminAuth, checkPermission('viewReports'), async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Mesaj gerekli'
+      });
+    }
+
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Rapor bulunamadı'
+      });
+    }
+
+    report.response = {
+      sent: true,
+      sentAt: new Date(),
+      message
+    };
+
+    await report.save();
+
+    // TODO: Send email if reporter provided email
+    // if (report.reportedBy.email) {
+    //   await sendEmail(report.reportedBy.email, 'Rapor Yanıtı', message);
+    // }
+
+    logger.info({
+      type: 'REPORT_RESPONSE_SENT',
+      reportId: report._id,
+      adminUsername: req.admin.username
+    });
+
+    res.json({
+      success: true,
+      message: 'Yanıt gönderildi'
+    });
+
+  } catch (error) {
+    logger.error({
+      type: 'ADMIN_REPORT_RESPOND_ERROR',
       error: error.message,
       adminId: req.admin._id
     });
