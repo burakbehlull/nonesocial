@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Video, Lock, Users, LogIn, Moon, Sun,
-  Sparkles, Shield, Zap
+  Sparkles, Shield, Zap, Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getSocket } from '@services/socket';
