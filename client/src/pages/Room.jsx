@@ -500,16 +500,16 @@ export default function Room() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Premium Header */}
-      <header className="border-b bg-card/50 backdrop-blur-xl px-6 py-3.5 flex items-center justify-between shadow-premium">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-              <MonitorUp className="w-5 h-5 text-primary" />
+      {/* Premium Header - Mobile Responsive */}
+      <header className="border-b bg-card/50 backdrop-blur-xl px-3 md:px-6 py-2.5 md:py-3.5 flex items-center justify-between shadow-premium">
+        <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+          <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+            <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-xl bg-primary/10 flex-shrink-0">
+              <MonitorUp className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             </div>
-            <div>
-              <h1 className="text-base font-semibold tracking-tight">{roomInfo?.name || roomId}</h1>
-              <p className="text-xs text-muted-foreground">{users.length} katılımcı</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-sm md:text-base font-semibold tracking-tight truncate">{roomInfo?.name || roomId}</h1>
+              <p className="text-[10px] md:text-xs text-muted-foreground">{users.length} katılımcı</p>
             </div>
           </div>
           
@@ -518,14 +518,15 @@ export default function Room() {
             variant="ghost"
             onClick={handleCopyLink}
             tooltip="Oda linkini kopyala"
+            className="hidden sm:flex"
           >
             <Copy className="w-4 h-4" />
           </IconButton>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* User ID Badge - Premium */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
+        <div className="flex items-center gap-1 md:gap-2">
+          {/* User ID Badge - Desktop Only */}
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
               <span className="text-xs font-medium text-muted-foreground">ID:</span>
@@ -547,69 +548,75 @@ export default function Room() {
             </IconButton>
           </div>
 
+          {/* Theme Toggle */}
           <IconButton
             variant="ghost"
             onClick={toggleTheme}
             tooltip={isDark ? 'Aydınlık mod' : 'Karanlık mod'}
+            className="hidden md:flex"
           >
             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </IconButton>
 
+          {/* Name Button - Hidden on small mobile */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowNameModal(true)}
-            className="gap-2"
+            className="gap-2 hidden sm:flex"
           >
             <Settings className="w-4 h-4" />
-            İsim
+            <span className="hidden md:inline">İsim</span>
           </Button>
 
+          {/* Call Buttons - Responsive */}
           {!isInCall ? (
             <Button
               size="sm"
               onClick={handleJoinCall}
-              className="bg-success hover:bg-success/90 text-success-foreground gap-2 shadow-premium"
+              className="bg-success hover:bg-success/90 text-success-foreground gap-1 md:gap-2 shadow-premium text-xs md:text-sm px-2 md:px-4"
             >
-              <PhoneIncoming className="w-4 h-4" />
-              Çağrıya Katıl
+              <PhoneIncoming className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Çağrıya Katıl</span>
+              <span className="sm:hidden">Katıl</span>
             </Button>
           ) : (
             <Button
               variant="destructive"
               size="sm"
               onClick={handleLeaveCall}
-              className="gap-2 shadow-premium"
+              className="gap-1 md:gap-2 shadow-premium text-xs md:text-sm px-2 md:px-4"
             >
-              <PhoneOutgoing className="w-4 h-4" />
-              Çağrıdan Ayrıl
+              <PhoneOutgoing className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Ayrıl</span>
             </Button>
           )}
 
+          {/* Leave Room - Icon only on mobile */}
           <Button
             variant="ghost"
             size="sm"
             onClick={handleLeaveRoom}
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1 md:gap-2 px-2 md:px-4"
           >
             <PhoneOff className="w-4 h-4" />
-            Odadan Ayrıl
+            <span className="hidden lg:inline">Odadan Ayrıl</span>
           </Button>
         </div>
       </header>
 
-      {/* Main Content - 3 Column Premium Layout */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Main Content - Responsive Layout: Mobile Stack, Desktop 3-Column */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         
-        {/* LEFT - Compact Members & Video */}
-        <aside className="w-72 border-r bg-card/30 flex flex-col">
+        {/* LEFT - Compact Members & Voice Chat - Collapsible on Mobile */}
+        <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r bg-card/30 flex flex-col max-h-[40vh] md:max-h-none">
           {/* Members Section */}
           <div className="border-b bg-card/50 backdrop-blur-sm">
-            <div className="p-3">
-              <div className="flex items-center gap-2 mb-3">
-                <Users className="w-4 h-4 text-muted-foreground" />
-                <h3 className="text-sm font-semibold">Üyeler</h3>
-                <Badge variant="secondary" className="ml-auto text-xs">
+            <div className="p-2 md:p-3">
+              <div className="flex items-center gap-2 mb-2 md:mb-3">
+                <Users className="w-3.5 h-3.5 md:w-4 md:h-4 text-muted-foreground" />
+                <h3 className="text-xs md:text-sm font-semibold">Üyeler</h3>
+                <Badge variant="secondary" className="ml-auto text-[10px] md:text-xs">
                   {users.length}
                 </Badge>
               </div>
@@ -619,27 +626,13 @@ export default function Room() {
                 audioEnabled={audioEnabled}
                 isInCall={isInCall}
               />
-              
-              {/* Debug: ID Kontrolü */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mt-2 p-2 bg-yellow-500/10 rounded text-[9px] font-mono space-y-0.5">
-                  <div className="font-bold text-yellow-600 dark:text-yellow-400">SOL PANEL (Üyeler)</div>
-                  <div>currentUserId: <span className="text-green-600">{currentUserId?.slice(0, 12)}</span></div>
-                  <div>users.length: {users.length}</div>
-                  <div className="text-[8px] opacity-70">
-                    {users.map((u, i) => (
-                      <div key={i}>
-                        {i+1}. {u.id.slice(0, 8)} {u.id === currentUserId ? '✓SEN' : ''}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Voice Chat Users */}
-          <div className="flex-1 overflow-auto scrollbar-thin p-4">
+          {/* Voice Chat Users - Hidden on Mobile when Empty */}
+          <div className={`flex-1 overflow-auto scrollbar-thin p-2 md:p-4 ${
+            users.filter(u => u.inCall).length === 0 ? 'hidden md:block' : ''
+          }`}>
             {/* Header - Her zaman göster */}
             <div className="flex flex-col items-center gap-3 pb-3 border-b border-border/50 mb-4">
               <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
@@ -791,12 +784,12 @@ export default function Room() {
           </div>
         </aside>
 
-        {/* CENTER - Chat (Main Focus) */}
-        <main className="flex-1 flex flex-col bg-background">
-          <div className="px-5 py-3.5 border-b bg-card/30 backdrop-blur-sm">
+        {/* CENTER - Chat (Main Focus) - Always Visible */}
+        <main className="flex-1 flex flex-col bg-background min-h-0">
+          <div className="px-3 md:px-5 py-2.5 md:py-3.5 border-b bg-card/30 backdrop-blur-sm">
             <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-muted-foreground" />
-              <h2 className="font-semibold text-sm">Sohbet</h2>
+              <MessageSquare className="w-3.5 h-3.5 md:w-4 md:h-4 text-muted-foreground" />
+              <h2 className="font-semibold text-xs md:text-sm">Sohbet</h2>
             </div>
           </div>
           
@@ -805,11 +798,11 @@ export default function Room() {
             <ChatMessages messages={messages} currentUserId={currentUserId} />
           </div>
 
-          {/* Message Input - Premium with Mention Autocomplete */}
-          <div className="p-4 border-t bg-card/30 backdrop-blur-sm relative">
+          {/* Message Input - Premium with Mention Autocomplete - Mobile Responsive */}
+          <div className="p-2 md:p-4 border-t bg-card/30 backdrop-blur-sm relative">
             {/* Mention Autocomplete Dropdown - Opens UPWARD */}
             {showMentions && (
-              <div className="absolute bottom-full left-4 right-4 mb-2">
+              <div className="absolute bottom-full left-2 right-2 md:left-4 md:right-4 mb-2">
                 {filteredUsers.length > 0 ? (
                   <MentionAutocomplete
                     users={filteredUsers}
@@ -819,12 +812,12 @@ export default function Room() {
                   />
                 ) : (
                   /* Empty State - Kullanıcı bulunamadı */
-                  <div className="w-72 bg-popover border border-border rounded-lg shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="w-full md:w-72 bg-popover border border-border rounded-lg shadow-xl p-3 md:p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs md:text-sm text-muted-foreground">
                         "{mentionQuery}" ile eşleşen kullanıcı bulunamadı
                       </p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">
+                      <p className="text-[10px] md:text-xs text-muted-foreground/70 mt-1">
                         İsim veya ID ile arayabilirsiniz
                       </p>
                     </div>
@@ -833,32 +826,32 @@ export default function Room() {
               </div>
             )}
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <Input
                 ref={messageInputRef}
-                placeholder="Mesajınızı yazın... (@mention için @ yazın)"
+                placeholder="Mesajınızı yazın..."
                 value={messageInput}
                 onChange={handleMessageInputChange}
                 onKeyDown={handleMessageInputKeyDown}
-                className="flex-1 h-11 bg-background border-border/50 focus-visible:ring-primary/20 shadow-sm"
+                className="flex-1 h-9 md:h-11 text-sm md:text-base bg-background border-border/50 focus-visible:ring-primary/20 shadow-sm"
                 aria-label="Mesaj yazın"
               />
               <Button
                 size="default"
                 onClick={handleSendMessage}
                 disabled={!messageInput.trim()}
-                className="px-5 gap-2 shadow-premium"
+                className="px-3 md:px-5 gap-1 md:gap-2 shadow-premium h-9 md:h-11"
                 aria-label="Mesaj gönder"
               >
-                <Send className="w-4 h-4" />
-                Gönder
+                <Send className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span className="hidden sm:inline">Gönder</span>
               </Button>
             </div>
           </div>
         </main>
 
-        {/* RIGHT - Voice Controls & Participants */}
-        <aside className="w-72 border-l bg-card/30 flex flex-col">
+        {/* RIGHT - Voice Controls & Participants - Hidden on Mobile */}
+        <aside className="hidden lg:flex w-72 border-l bg-card/30 flex-col">
           
           {/* Voice Controls - Premium Card */}
           {isInCall && (
