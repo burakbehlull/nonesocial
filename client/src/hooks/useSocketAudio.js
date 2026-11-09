@@ -114,7 +114,16 @@ export const useSocketAudio = (roomId) => {
       // BufferSource oluştur ve çal
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
+      
+      // 🔊 Gain Node ile ses seviyesi kontrolü
+      const gainNode = audioContext.createGain();
+      
+      // LocalStorage'dan kullanıcının ses seviyesini al (varsayılan 100%)
+      const volumePercent = parseInt(localStorage.getItem(`volume_${userId}`) || '100');
+      gainNode.gain.value = volumePercent / 100; // 0-2 arası (0% - 200%)
+      
+      source.connect(gainNode);
+      gainNode.connect(audioContext.destination);
       source.start(0);
       
     } catch (error) {
