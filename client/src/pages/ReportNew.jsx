@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@comp
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import Footer from '@components/Footer';
+import { apiRequest } from '@/utils/api';
 
 const ReportNew = () => {
   const navigate = useNavigate();
@@ -70,11 +71,8 @@ const ReportNew = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/reports/create', {
+      const response = await apiRequest('/api/reports/create', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(formData)
       });
 

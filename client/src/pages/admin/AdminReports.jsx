@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import { Button } from '@components/ui/button';
+import { adminApi } from '@/utils/api';
 
 const AdminReports = () => {
   const navigate = useNavigate();
@@ -37,8 +38,6 @@ const AdminReports = () => {
   };
 
   const loadReports = async () => {
-    const token = localStorage.getItem('adminToken');
-    
     try {
       const params = new URLSearchParams({
         page: pagination.page,
@@ -47,11 +46,7 @@ const AdminReports = () => {
         ...(filter.category && { category: filter.category })
       });
 
-      const response = await fetch(`/api/admin/reports?${params}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      const data = await response.json();
+      const data = await adminApi(`/api/admin/reports?${params}`);
 
       if (data.success) {
         setReports(data.reports);
@@ -66,14 +61,8 @@ const AdminReports = () => {
   };
 
   const handleViewReport = async (reportId) => {
-    const token = localStorage.getItem('adminToken');
-    
     try {
-      const response = await fetch(`/api/admin/reports/${reportId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      const data = await response.json();
+      const data = await adminApi(`/api/admin/reports/${reportId}`);
 
       if (data.success) {
         setSelectedReport(data.report);
@@ -85,19 +74,23 @@ const AdminReports = () => {
   };
 
   const handleUpdateStatus = async (status, notes = '') => {
-    const token = localStorage.getItem('adminToken');
-    
     try {
-      const response = await fetch(`/api/admin/reports/${selectedReport._id}/status`, {
+      const data = await adminApi(`/api/admin/reports/${selectedReport._id}/status`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ status, adminNotes: notes })
       });
 
-      const data = await response.json();
+      if (data.success) {
+        toast.success('Durum güncellendi');
+        setShowModal(false);
+        loadReports();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error('İşlem başarısız');
+    }
+  };
 
       if (data.success) {
         toast.success('Durum güncellendi');
@@ -113,19 +106,12 @@ const AdminReports = () => {
 
   const handleAction = async (actionType) => {
     const details = prompt(`${actionType} için detay girin (opsiyonel):`);
-    const token = localStorage.getItem('adminToken');
     
     try {
-      const response = await fetch(`/api/admin/reports/${selectedReport._id}/action`, {
+      const data = await adminApi(`/api/admin/reports/${selectedReport._id}/action`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ actionType, details })
       });
-
-      const data = await response.json();
 
       if (data.success) {
         toast.success('Aksiyon gerçekleştirildi');
@@ -142,20 +128,24 @@ const AdminReports = () => {
   const handleSendResponse = async () => {
     const message = prompt('Kullanıcıya gönderilecek mesaj:');
     if (!message) return;
-
-    const token = localStorage.getItem('adminToken');
     
     try {
-      const response = await fetch(`/api/admin/reports/${selectedReport._id}/respond`, {
+      const data = await adminApi(`/api/admin/reports/${selectedReport._id}/respond`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ message })
       });
 
-      const data = await response.json();
+      if (data.success) {
+        toast.success('Yanıt gönderildi');
+        setShowModal(false);
+        loadReports();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error('İşlem başarısız');
+    }
+  };
 
       if (data.success) {
         toast.success('Yanıt gönderildi');

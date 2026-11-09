@@ -4,6 +4,7 @@ import { Shield, Users, LogOut, Menu, X, Ban, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import { Button } from '@components/ui/button';
+import { adminApi } from '@/utils/api';
 
 const AdminUsers = () => {
   const navigate = useNavigate();
@@ -31,14 +32,8 @@ const AdminUsers = () => {
   };
 
   const loadUsers = async () => {
-    const token = localStorage.getItem('adminToken');
-    
     try {
-      const response = await fetch(`/api/admin/users?page=${pagination.page}&limit=20`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      const data = await response.json();
+      const data = await adminApi(`/api/admin/users?page=${pagination.page}&limit=20`);
 
       if (data.success) {
         setUsers(data.users);
@@ -55,20 +50,12 @@ const AdminUsers = () => {
   const handleBan = async (userId) => {
     const reason = prompt('Ban sebebi:');
     if (!reason) return;
-
-    const token = localStorage.getItem('adminToken');
     
     try {
-      const response = await fetch(`/api/admin/users/${userId}/ban`, {
+      const data = await adminApi(`/api/admin/users/${userId}/ban`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ reason, duration: 30 })
       });
-
-      const data = await response.json();
 
       if (data.success) {
         toast.success('Kullanıcı yasaklandı');

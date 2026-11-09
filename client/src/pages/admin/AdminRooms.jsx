@@ -4,6 +4,7 @@ import { Shield, Video, LogOut, Menu, X, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import { Button } from '@components/ui/button';
+import { adminApi } from '@/utils/api';
 
 const AdminRooms = () => {
   const navigate = useNavigate();
@@ -31,14 +32,8 @@ const AdminRooms = () => {
   };
 
   const loadRooms = async () => {
-    const token = localStorage.getItem('adminToken');
-    
     try {
-      const response = await fetch(`/api/admin/rooms?page=${pagination.page}&limit=20`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      const data = await response.json();
+      const data = await adminApi(`/api/admin/rooms?page=${pagination.page}&limit=20`);
 
       if (data.success) {
         setRooms(data.rooms);
@@ -54,16 +49,11 @@ const AdminRooms = () => {
 
   const handleDelete = async (roomId) => {
     if (!confirm('Bu odayı silmek istediğinizden emin misiniz?')) return;
-
-    const token = localStorage.getItem('adminToken');
     
     try {
-      const response = await fetch(`/api/admin/rooms/${roomId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+      const data = await adminApi(`/api/admin/rooms/${roomId}`, {
+        method: 'DELETE'
       });
-
-      const data = await response.json();
 
       if (data.success) {
         toast.success('Oda silindi');

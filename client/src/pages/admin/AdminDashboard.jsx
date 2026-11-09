@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/card';
 import { Button } from '@components/ui/button';
+import { adminApi } from '@/utils/api';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -30,13 +31,7 @@ const AdminDashboard = () => {
     }
 
     try {
-      const response = await fetch('/api/admin/verify', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
+      const data = await adminApi('/api/admin/verify');
 
       if (!data.success) {
         localStorage.removeItem('adminToken');
@@ -53,16 +48,8 @@ const AdminDashboard = () => {
   };
 
   const loadStats = async () => {
-    const token = localStorage.getItem('adminToken');
-    
     try {
-      const response = await fetch('/api/admin/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
+      const data = await adminApi('/api/admin/stats');
 
       if (data.success) {
         setStats(data.stats);
