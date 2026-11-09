@@ -26,6 +26,7 @@ export const initializeTracking = async (socket) => {
       user = await User.create({
         userId: socket.userId,
         ipHash,
+        ipAddress: ip, // Gerçek IP (superadmin için)
         location,
         browser,
         firstSeen: new Date(),

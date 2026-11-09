@@ -15,6 +15,13 @@ const userSchema = new mongoose.Schema({
     required: true
   },
   
+  // Gerçek IP Adresi (sadece superadmin görebilir)
+  ipAddress: {
+    type: String,
+    required: true,
+    select: false // Varsayılan olarak gösterme
+  },
+  
   // Konum Bilgisi
   location: {
     country: String,

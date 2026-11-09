@@ -226,7 +226,7 @@ router.get('/users', adminAuth, checkPermission('viewUsers'), async (req, res) =
 
     const [users, total] = await Promise.all([
       User.find()
-        .select('-ipHash')
+        .select('-ipHash') // Hide hash for regular admins
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -261,6 +261,162 @@ router.get('/users', adminAuth, checkPermission('viewUsers'), async (req, res) =
     res.status(500).json({ 
       success: false, 
       message: 'Sunucu hatası' 
+    });
+  }
+});
+
+// Get all users with REAL IPs (SUPERADMIN ONLY)
+router.get('/users/detailed', adminAuth, superAdminOnly, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      User.find()
+        .select('+ipAddress') // Include real IP (only for superadmin)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments()
+    ]);
+
+    logger.warn({
+      type: 'SUPERADMIN_DETAILED_USERS_VIEWED',
+      adminId: req.admin._id,
+      username: req.admin.username,
+      page,
+      total
+    });
+
+    res.json({
+      success: true,
+      users,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    logger.error({
+      type: 'SUPERADMIN_USERS_ERROR',
+      error: error.message,
+      adminId: req.admin._id
+    });
+    
+    res.status(500).json({ 
+      success: false, 
+      message: 'Sunucu hatası' 
+    });
+  }
+});
+
+// Get single user details (SUPERADMIN ONLY)
+router.get('/users/:userId/details', adminAuth, superAdminOnly, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findOne({ userId }).select('+ipAddress');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kullanıcı bulunamadı'
+      });
+    }
+
+    // Get user's session history
+    const sessions = await SessionLog.find({ userId })
+      .sort({ connectedAt: -1 })
+      .limit(10);
+
+    // Get user's rooms
+    const rooms = await Room.find({
+      $or: [
+        { ownerId: userId },
+        { 'members.userId': userId }
+      ]
+    }).limit(10);
+
+    logger.warn({
+      type: 'SUPERADMIN_USER_DETAILS_VIEWED',
+      adminId: req.admin._id,
+      username: req.admin.username,
+      targetUserId: userId
+    });
+
+    res.json({
+      success: true,
+      user,
+      sessions,
+      rooms
+    });
+
+  } catch (error) {
+    logger.error({
+      type: 'SUPERADMIN_USER_DETAILS_ERROR',
+      error: error.message,
+      adminId: req.admin._id
+    });
+    
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+// Update user data (SUPERADMIN ONLY)
+router.patch('/users/:userId', adminAuth, superAdminOnly, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const updates = req.body;
+
+    // Don't allow updating sensitive fields
+    delete updates._id;
+    delete updates.ipHash;
+    delete updates.ipAddress;
+    delete updates.userId;
+
+    const user = await User.findOneAndUpdate(
+      { userId },
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Kullanıcı bulunamadı'
+      });
+    }
+
+    logger.warn({
+      type: 'SUPERADMIN_USER_UPDATED',
+      adminId: req.admin._id,
+      username: req.admin.username,
+      targetUserId: userId,
+      updates: Object.keys(updates)
+    });
+
+    res.json({
+      success: true,
+      message: 'Kullanıcı güncellendi',
+      user
+    });
+
+  } catch (error) {
+    logger.error({
+      type: 'SUPERADMIN_USER_UPDATE_ERROR',
+      error: error.message,
+      adminId: req.admin._id
+    });
+    
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
     });
   }
 });

@@ -100,6 +100,12 @@ const AdminUsers = () => {
               <Users className="w-5 h-5" />
               Kullanıcılar
             </Link>
+            {admin?.role === 'superadmin' && (
+              <Link to="/admin/users/detailed" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground border-l-2 border-orange-500 ml-2">
+                <Shield className="w-5 h-5 text-orange-500" />
+                <span className="text-sm">Detaylı Kullanıcılar</span>
+              </Link>
+            )}
             <Link to="/admin/rooms" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
               <Shield className="w-5 h-5" />
               Odalar

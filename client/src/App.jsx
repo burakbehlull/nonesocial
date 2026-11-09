@@ -8,6 +8,7 @@ import ReportNew from '@pages/ReportNew'
 import AdminLogin from '@pages/admin/AdminLogin'
 import AdminDashboard from '@pages/admin/AdminDashboard'
 import AdminUsers from '@pages/admin/AdminUsers'
+import AdminUsersDetailed from '@pages/admin/AdminUsersDetailed'
 import AdminRooms from '@pages/admin/AdminRooms'
 import AdminReports from '@pages/admin/AdminReports'
 import WebRTCTest from '@pages/WebRTCTest'
@@ -60,6 +61,8 @@ function App() {
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/users/detailed" element={<AdminUsersDetailed />} />
+          <Route path="/admin/users/detailed/:userId" element={<AdminUsersDetailed />} />
           <Route path="/admin/rooms" element={<AdminRooms />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           
