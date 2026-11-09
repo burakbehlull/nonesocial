@@ -70,8 +70,15 @@ const Home = () => {
         <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Theme Toggle - Premium */}
-      <div className="fixed top-6 right-6 z-50">
+      {/* Theme Toggle & Support - Premium */}
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
+        <Link
+          to="/support"
+          className="px-4 py-2 rounded-lg bg-card/80 backdrop-blur-sm border border-border/50 text-sm font-semibold hover:bg-card hover:border-primary/50 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+        >
+          <Info className="w-4 h-4" />
+          Support
+        </Link>
         <IconButton
           variant="ghost"
           className="glass shadow-premium"

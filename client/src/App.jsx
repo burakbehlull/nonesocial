@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '@contexts/ThemeContext'
 import Home from '@pages/Home'
 import Room from '@pages/Room'
+import Support from '@pages/Support'
 import WebRTCTest from '@pages/WebRTCTest'
 import NotFound from '@pages/NotFound'
 
@@ -46,6 +47,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/room/:roomId" element={<Room />} />
+          <Route path="/support" element={<Support />} />
           <Route path="/test" element={<WebRTCTest />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

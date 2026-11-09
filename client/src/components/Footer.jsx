@@ -1,4 +1,5 @@
-import { Github, Heart } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Github, Heart, Info } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -31,6 +32,15 @@ const Footer = () => {
 
           {/* Right - Links */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <Link
+              to="/support"
+              className="hover:text-primary transition-colors duration-300 flex items-center gap-1"
+              aria-label="Support ve veri gizliliği"
+            >
+              <Info className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Support</span>
+            </Link>
+            <span className="hidden sm:inline">•</span>
             <a
               href="https://github.com/orgs/Paradox-Forge/"
               target="_blank"
