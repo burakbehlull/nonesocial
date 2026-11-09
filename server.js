@@ -61,7 +61,7 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
@@ -89,7 +89,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
     credentials: true
   },
   pingTimeout: 60000,
