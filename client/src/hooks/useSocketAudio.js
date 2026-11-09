@@ -9,9 +9,10 @@ export const useSocketAudio = (roomId) => {
   const socket = useRef(null);
   const localStreamRef = useRef(null);
   const audioContextRef = useRef(null);
-  const processorNodeRef = useRef(null);
-  const remoteAudiosRef = useRef({}); // Her kullanıcı için ayrı audio element
-  const audioBuffersRef = useRef({}); // Her kullanıcı için buffer
+  const mediaRecorderRef = useRef(null);
+  const remoteAudioContextsRef = useRef({}); // Her kullanıcı için ayrı context
+  const audioQueuesRef = useRef({}); // Her kullanıcı için audio queue
+  const isPlayingRef = useRef({}); // Playback durumu
 
   // Mikrofon aç ve ses yakalama başlat
   const initializeAudio = useCallback(async () => {
@@ -22,56 +23,50 @@ export const useSocketAudio = (roomId) => {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          sampleRate: 48000, // Yüksek kalite
+          channelCount: 1
         },
         video: false
       });
       
       const audioTrack = stream.getAudioTracks()[0];
-      audioTrack.enabled = true; // Başlangıçta açık
+      audioTrack.enabled = true;
       
       localStreamRef.current = stream;
       setAudioEnabled(true);
       
       console.log('✅ Mikrofon erişimi verildi');
       
-      // Audio context oluştur
-      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      const audioContext = audioContextRef.current;
+      // MediaRecorder kullanarak ses kaydet (daha verimli)
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus', // Opus codec, düşük latency
+        audioBitsPerSecond: 48000 // Kaliteli ses
+      });
       
-      // Mikrofon source
-      const source = audioContext.createMediaStreamSource(stream);
+      mediaRecorderRef.current = mediaRecorder;
       
-      // Script processor (ses verilerini yakalamak için)
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
-      
-      processor.onaudioprocess = (e) => {
-        const audioTrack = localStreamRef.current?.getAudioTracks()[0];
-        
-        // Mikrofon kapalıysa veya çağrıda değilsek veri gönderme
-        if (!audioTrack || !audioTrack.enabled || !socket.current) return;
-        
-        const inputData = e.inputBuffer.getChannelData(0);
-        
-        // Float32Array'i daha küçük formata çevir (16-bit PCM)
-        const pcmData = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          const s = Math.max(-1, Math.min(1, inputData[i]));
-          pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0 && audioTrack.enabled && socket.current) {
+          // Blob'u ArrayBuffer'a çevir
+          event.data.arrayBuffer().then((buffer) => {
+            // Base64'e encode et (socket için)
+            const base64 = btoa(
+              new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+            );
+            
+            socket.current.emit('audio-data', {
+              roomId,
+              audioData: base64
+            });
+          });
         }
-        
-        // Socket ile gönder
-        socket.current.emit('audio-data', {
-          roomId,
-          audioData: Array.from(pcmData) // ArrayBuffer yerine normal array
-        });
       };
       
-      source.connect(processor);
-      processor.connect(audioContext.destination);
-      processorNodeRef.current = processor;
+      // 100ms chunk'lar halinde gönder (düşük latency)
+      mediaRecorder.start(100);
       
-      console.log('🎵 Ses yakalama başladı');
+      console.log('🎵 Ses yakalama başladı (Opus codec, 48kbps)');
       
       return stream;
     } catch (error) {
@@ -80,47 +75,77 @@ export const useSocketAudio = (roomId) => {
     }
   }, [roomId]);
 
-  // Remote ses çal
-  const playRemoteAudio = useCallback((userId, audioData) => {
+  // Remote ses çal (queue sistemiyle)
+  const playRemoteAudio = useCallback(async (userId, audioDataBase64) => {
     try {
-      // Audio element yoksa oluştur
-      if (!remoteAudiosRef.current[userId]) {
-        const audio = new Audio();
-        audio.autoplay = true;
-        remoteAudiosRef.current[userId] = audio;
-        audioBuffersRef.current[userId] = [];
-        console.log('🔊 Audio element oluşturuldu:', userId);
+      // Audio context yoksa oluştur
+      if (!remoteAudioContextsRef.current[userId]) {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+          latencyHint: 'interactive', // Düşük latency
+          sampleRate: 48000
+        });
+        remoteAudioContextsRef.current[userId] = audioContext;
+        audioQueuesRef.current[userId] = [];
+        isPlayingRef.current[userId] = false;
+        console.log('🔊 Audio context oluşturuldu:', userId.slice(0, 8));
       }
       
-      const audioContext = audioContextRef.current;
-      if (!audioContext) {
-        console.warn('⚠️ AudioContext yok');
-        return;
+      const audioContext = remoteAudioContextsRef.current[userId];
+      
+      // Base64'ü decode et
+      const binaryString = atob(audioDataBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
       
-      // Int16Array'e çevir
-      const pcmData = new Int16Array(audioData);
+      // ArrayBuffer'ı AudioBuffer'a decode et
+      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
       
-      // Float32Array'e çevir (playback için)
-      const floatData = new Float32Array(pcmData.length);
-      for (let i = 0; i < pcmData.length; i++) {
-        floatData[i] = pcmData[i] / (pcmData[i] < 0 ? 0x8000 : 0x7FFF);
+      // Queue'ya ekle
+      audioQueuesRef.current[userId].push(audioBuffer);
+      
+      // Eğer çalmıyorsa başlat
+      if (!isPlayingRef.current[userId]) {
+        playNextInQueue(userId);
       }
-      
-      // AudioBuffer oluştur
-      const audioBuffer = audioContext.createBuffer(1, floatData.length, audioContext.sampleRate);
-      audioBuffer.getChannelData(0).set(floatData);
-      
-      // BufferSource oluştur ve çal
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
-      source.start(0);
       
     } catch (error) {
-      console.error('❌ Ses çalma hatası:', error);
+      console.error('❌ Ses çalma hatası:', userId.slice(0, 8), error);
     }
   }, []);
+
+  // Queue'dan sıradaki ses parçasını çal
+  const playNextInQueue = (userId) => {
+    const queue = audioQueuesRef.current[userId];
+    const audioContext = remoteAudioContextsRef.current[userId];
+    
+    if (!queue || queue.length === 0) {
+      isPlayingRef.current[userId] = false;
+      return;
+    }
+    
+    isPlayingRef.current[userId] = true;
+    const audioBuffer = queue.shift();
+    
+    // Buffer source oluştur ve çal
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    
+    // Gain node (volume control için)
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = 1.0;
+    
+    source.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Bittiğinde sıradakini çal
+    source.onended = () => {
+      playNextInQueue(userId);
+    };
+    
+    source.start(0);
+  };
 
   // Mikrofon toggle
   const toggleAudio = useCallback(() => {
@@ -159,16 +184,10 @@ export const useSocketAudio = (roomId) => {
   const leaveCall = useCallback(() => {
     console.log('📴 Çağrıdan ayrılıyor...');
     
-    // Processor durdur
-    if (processorNodeRef.current) {
-      processorNodeRef.current.disconnect();
-      processorNodeRef.current = null;
-    }
-    
-    // Audio context kapat
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+    // MediaRecorder durdur
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
     }
     
     // Stream durdur
@@ -180,13 +199,15 @@ export const useSocketAudio = (roomId) => {
       localStreamRef.current = null;
     }
     
-    // Remote audio'ları temizle
-    Object.values(remoteAudiosRef.current).forEach(audio => {
-      audio.pause();
-      audio.src = '';
+    // Remote audio context'leri temizle
+    Object.entries(remoteAudioContextsRef.current).forEach(([userId, ctx]) => {
+      if (ctx.state !== 'closed') {
+        ctx.close();
+      }
     });
-    remoteAudiosRef.current = {};
-    audioBuffersRef.current = {};
+    remoteAudioContextsRef.current = {};
+    audioQueuesRef.current = {};
+    isPlayingRef.current = {};
     
     setAudioEnabled(false);
     setInCall(false);
@@ -218,33 +239,33 @@ export const useSocketAudio = (roomId) => {
 
     // Audio data geldi (başka kullanıcıdan)
     const handleAudioData = ({ userId, audioData }) => {
-      // Sesi çal (çağrıda olup olmama önemli değil, backend kontrol ediyor)
+      // Sesi çal
       playRemoteAudio(userId, audioData);
     };
 
     // User left
     const handleUserLeft = ({ userId }) => {
-      console.log('👋 Kullanıcı ayrıldı:', userId);
+      console.log('👋 Kullanıcı ayrıldı:', userId.slice(0, 8));
       
-      // Audio element'i temizle
-      if (remoteAudiosRef.current[userId]) {
-        remoteAudiosRef.current[userId].pause();
-        remoteAudiosRef.current[userId].src = '';
-        delete remoteAudiosRef.current[userId];
-        delete audioBuffersRef.current[userId];
+      // Audio context temizle
+      if (remoteAudioContextsRef.current[userId]) {
+        remoteAudioContextsRef.current[userId].close();
+        delete remoteAudioContextsRef.current[userId];
+        delete audioQueuesRef.current[userId];
+        delete isPlayingRef.current[userId];
       }
     };
 
     // User left call
     const handleUserLeftCall = ({ userId }) => {
-      console.log('📴 Kullanıcı çağrıdan ayrıldı:', userId);
+      console.log('📴 Kullanıcı çağrıdan ayrıldı:', userId.slice(0, 8));
       
-      // Audio element'i temizle
-      if (remoteAudiosRef.current[userId]) {
-        remoteAudiosRef.current[userId].pause();
-        remoteAudiosRef.current[userId].src = '';
-        delete remoteAudiosRef.current[userId];
-        delete audioBuffersRef.current[userId];
+      // Audio context temizle
+      if (remoteAudioContextsRef.current[userId]) {
+        remoteAudioContextsRef.current[userId].close();
+        delete remoteAudioContextsRef.current[userId];
+        delete audioQueuesRef.current[userId];
+        delete isPlayingRef.current[userId];
       }
     };
 
