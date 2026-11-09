@@ -251,12 +251,19 @@ const AdminUsersDetailed = () => {
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
                 <Shield className="w-5 h-5 text-orange-500 mt-0.5" />
-                <div>
+                <div className="space-y-2">
                   <h3 className="font-semibold text-orange-500">Superadmin Erişimi</h3>
                   <p className="text-sm text-orange-400/80">
                     Bu sayfada kullanıcıların gerçek IP adresleri, lokasyonları ve tüm hassas verileri görüntülenir. 
                     GDPR ve gizlilik kurallarına uygun olarak kullanın.
                   </p>
+                  <div className="mt-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs">
+                    <p className="text-orange-300 font-medium mb-1">📝 Not:</p>
+                    <p className="text-orange-400/70">
+                      <strong>Eski kullanıcılar:</strong> Sistem güncellemesinden önce kaydolan kullanıcıların gerçek IP adresleri saklanmamıştır. 
+                      Bu kullanıcılar için sadece hash gösterilir. Kullanıcı yeniden bağlandığında gerçek IP kaydedilecektir.
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -291,9 +298,20 @@ const AdminUsersDetailed = () => {
                           </code>
                         </td>
                         <td className="py-4">
-                          <code className="text-xs bg-orange-500/10 text-orange-500 px-2 py-1 rounded border border-orange-500/20">
-                            {user.ipAddress || 'N/A'}
-                          </code>
+                          {user.ipAddress ? (
+                            <code className="text-xs bg-orange-500/10 text-orange-500 px-2 py-1 rounded border border-orange-500/20">
+                              {user.ipAddress}
+                            </code>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              <code className="text-xs bg-muted px-2 py-1 rounded">
+                                {user.ipHash?.substring(0, 16)}...
+                              </code>
+                              <span className="text-[10px] text-muted-foreground">
+                                (Hash - Gerçek IP yok)
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-4">
                           <div className="flex items-center gap-2">

@@ -277,9 +277,17 @@ router.get('/users/detailed', adminAuth, superAdminOnly, async (req, res) => {
         .select('+ipAddress') // Include real IP (only for superadmin)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(), // Use lean() for better performance
       User.countDocuments()
     ]);
+
+    // If ipAddress doesn't exist, try to show a placeholder
+    const enrichedUsers = users.map(user => ({
+      ...user,
+      ipAddress: user.ipAddress || null,
+      ipDisplayHint: user.ipAddress ? 'real' : 'hash_only'
+    }));
 
     logger.warn({
       type: 'SUPERADMIN_DETAILED_USERS_VIEWED',
@@ -291,7 +299,7 @@ router.get('/users/detailed', adminAuth, superAdminOnly, async (req, res) => {
 
     res.json({
       success: true,
-      users,
+      users: enrichedUsers,
       pagination: {
         total,
         page,
