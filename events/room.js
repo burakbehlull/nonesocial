@@ -15,16 +15,24 @@ import {
   webrtcLimiter
 } from '../utils/rateLimiter.js';
 import { schemas, validate } from '../utils/validation.js';
-import {
-  initializeTracking,
-  finalizeTracking,
-  trackRoomCreate,
-  trackRoomJoin,
-  trackRoomLeave,
-  trackMessage,
-  trackCallStart,
-  trackCallEnd
-} from '../middleware/trackingMiddleware.js';
+
+// Analytics tracking (optional - requires MongoDB)
+let trackingMiddleware = null;
+
+// Conditionally import tracking
+async function loadTracking() {
+  try {
+    trackingMiddleware = await import('../middleware/trackingMiddleware.js');
+    console.log('✅ Analytics tracking enabled');
+    return true;
+  } catch (err) {
+    console.log('⚠️  Analytics tracking disabled:', err.message);
+    return false;
+  }
+}
+
+// Load tracking immediately
+const trackingPromise = loadTracking();
 
 const rooms = {};
 const userSockets = new Map(); // userId -> socket.id mapping
@@ -62,7 +70,10 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000); // Every hour
 
-export default (io, socket) => {
+export default async (io, socket) => {
+  // Wait for tracking to load (non-blocking)
+  await trackingPromise;
+  
   // Store io globally for cleanup
   if (!global.io) {
     global.io = io;
@@ -72,13 +83,15 @@ export default (io, socket) => {
   userSockets.set(socket.userId, socket.id);
   
   // 📊 Initialize tracking (MongoDB analytics)
-  initializeTracking(socket).catch(err => {
-    logger.error({
-      type: 'TRACKING_INIT_FAILED',
-      userId: socket.userId,
-      error: err.message
+  if (trackingMiddleware) {
+    trackingMiddleware.initializeTracking(socket).catch(err => {
+      logger.error({
+        type: 'TRACKING_INIT_FAILED',
+        userId: socket.userId,
+        error: err.message
+      });
     });
-  });
+  }
   
   logger.info({
     type: 'USER_SOCKET_CONNECTED',
@@ -160,9 +173,11 @@ export default (io, socket) => {
       });
 
       // 📊 Track room creation
-      trackRoomCreate(socket, roomId, sanitizedName, !!hashedPassword, Math.min(data.limit, 50), data.videoEnabled).catch(err => {
-        logger.error({ type: 'TRACK_CREATE_FAILED', error: err.message });
-      });
+      if (trackingMiddleware) {
+        trackingMiddleware.trackRoomCreate(socket, roomId, sanitizedName, !!hashedPassword, Math.min(data.limit, 50), data.videoEnabled).catch(err => {
+          logger.error({ type: 'TRACK_CREATE_FAILED', error: err.message });
+        });
+      }
 
       io.to(roomId).emit('roomUsers', getUsers(roomId));
 
@@ -300,8 +315,8 @@ export default (io, socket) => {
       });
 
       // 📊 Track room join (sadece yeni join için)
-      if (!existingMember) {
-        trackRoomJoin(socket, roomId, room.name).catch(err => {
+      if (!existingMember && trackingMiddleware) {
+        trackingMiddleware.trackRoomJoin(socket, roomId, room.name).catch(err => {
           logger.error({ type: 'TRACK_JOIN_FAILED', error: err.message });
         });
       }
@@ -481,9 +496,11 @@ export default (io, socket) => {
       });
 
       // 📊 Track message
-      trackMessage(socket, roomId).catch(err => {
-        logger.error({ type: 'TRACK_MESSAGE_FAILED', error: err.message });
-      });
+      if (trackingMiddleware) {
+        trackingMiddleware.trackMessage(socket, roomId).catch(err => {
+          logger.error({ type: 'TRACK_MESSAGE_FAILED', error: err.message });
+        });
+      }
 
       // Mesajı tüm odaya gönder
       io.to(roomId).emit('receiveMessage', msg);
@@ -594,9 +611,11 @@ export default (io, socket) => {
     const room = rooms[roomId];
     if (room?.members[socket.userId]) {
       // 📊 Track room leave
-      trackRoomLeave(socket, roomId).catch(err => {
-        logger.error({ type: 'TRACK_LEAVE_FAILED', error: err.message });
-      });
+      if (trackingMiddleware) {
+        trackingMiddleware.trackRoomLeave(socket, roomId).catch(err => {
+          logger.error({ type: 'TRACK_LEAVE_FAILED', error: err.message });
+        });
+      }
       
       delete room.members[socket.userId];
       socket.leave(roomId);
@@ -643,9 +662,11 @@ export default (io, socket) => {
     });
 
     // 📊 Track call start
-    trackCallStart(socket, roomId).catch(err => {
-      logger.error({ type: 'TRACK_CALL_START_FAILED', error: err.message });
-    });
+    if (trackingMiddleware) {
+      trackingMiddleware.trackCallStart(socket, roomId).catch(err => {
+        logger.error({ type: 'TRACK_CALL_START_FAILED', error: err.message });
+      });
+    }
 
     // Tüm odaya bildir
     io.to(roomId).emit('roomUsers', getUsers(roomId));
@@ -674,9 +695,11 @@ export default (io, socket) => {
     });
 
     // 📊 Track call end
-    trackCallEnd(socket, roomId).catch(err => {
-      logger.error({ type: 'TRACK_CALL_END_FAILED', error: err.message });
-    });
+    if (trackingMiddleware) {
+      trackingMiddleware.trackCallEnd(socket, roomId).catch(err => {
+        logger.error({ type: 'TRACK_CALL_END_FAILED', error: err.message });
+      });
+    }
 
     // Tüm odaya bildir
     io.to(roomId).emit('roomUsers', getUsers(roomId));
@@ -909,9 +932,11 @@ export default (io, socket) => {
     });
 
     // 📊 Finalize tracking
-    finalizeTracking(socket).catch(err => {
-      logger.error({ type: 'TRACKING_FINALIZE_FAILED', error: err.message });
-    });
+    if (trackingMiddleware) {
+      trackingMiddleware.finalizeTracking(socket).catch(err => {
+        logger.error({ type: 'TRACKING_FINALIZE_FAILED', error: err.message });
+      });
+    }
 
     // Remove from socket mapping
     userSockets.delete(socket.userId);

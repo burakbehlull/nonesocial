@@ -12,8 +12,10 @@ import { connectDB } from './utils/database.js';
 
 dotenv.config();
 
-// MongoDB'ye bağlan
-connectDB();
+// MongoDB'ye bağlan (optional - analytics için)
+connectDB().catch(err => {
+  console.log('⚠️  MongoDB connection failed, continuing without analytics');
+});
 
 const app = express();
 
