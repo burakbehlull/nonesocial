@@ -8,8 +8,12 @@ import dotenv from 'dotenv';
 import eventLoader from './events/eventLoader.js';
 import logger from './utils/logger.js';
 import { socketAuthMiddleware } from './utils/auth.js';
+import { connectDB } from './utils/database.js';
 
 dotenv.config();
+
+// MongoDB'ye bağlan
+connectDB();
 
 const app = express();
 

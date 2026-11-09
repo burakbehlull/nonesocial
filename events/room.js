@@ -15,6 +15,16 @@ import {
   webrtcLimiter
 } from '../utils/rateLimiter.js';
 import { schemas, validate } from '../utils/validation.js';
+import {
+  initializeTracking,
+  finalizeTracking,
+  trackRoomCreate,
+  trackRoomJoin,
+  trackRoomLeave,
+  trackMessage,
+  trackCallStart,
+  trackCallEnd
+} from '../middleware/trackingMiddleware.js';
 
 const rooms = {};
 const userSockets = new Map(); // userId -> socket.id mapping
@@ -60,6 +70,15 @@ export default (io, socket) => {
   
   // Store user socket mapping
   userSockets.set(socket.userId, socket.id);
+  
+  // 📊 Initialize tracking (MongoDB analytics)
+  initializeTracking(socket).catch(err => {
+    logger.error({
+      type: 'TRACKING_INIT_FAILED',
+      userId: socket.userId,
+      error: err.message
+    });
+  });
   
   logger.info({
     type: 'USER_SOCKET_CONNECTED',
@@ -138,6 +157,11 @@ export default (io, socket) => {
         userId: socket.userId,
         name: sanitizedName,
         hasPassword: !!hashedPassword
+      });
+
+      // 📊 Track room creation
+      trackRoomCreate(socket, roomId, sanitizedName, !!hashedPassword, Math.min(data.limit, 50), data.videoEnabled).catch(err => {
+        logger.error({ type: 'TRACK_CREATE_FAILED', error: err.message });
       });
 
       io.to(roomId).emit('roomUsers', getUsers(roomId));
@@ -274,6 +298,13 @@ export default (io, socket) => {
         userId: socket.userId,
         memberCount: Object.keys(room.members).length
       });
+
+      // 📊 Track room join (sadece yeni join için)
+      if (!existingMember) {
+        trackRoomJoin(socket, roomId, room.name).catch(err => {
+          logger.error({ type: 'TRACK_JOIN_FAILED', error: err.message });
+        });
+      }
 
       // First send callback with room info
       callback?.({ 
@@ -449,6 +480,11 @@ export default (io, socket) => {
         mentionsCount: mentions.length
       });
 
+      // 📊 Track message
+      trackMessage(socket, roomId).catch(err => {
+        logger.error({ type: 'TRACK_MESSAGE_FAILED', error: err.message });
+      });
+
       // Mesajı tüm odaya gönder
       io.to(roomId).emit('receiveMessage', msg);
       
@@ -557,6 +593,11 @@ export default (io, socket) => {
   socket.on('leaveRoom', ({ roomId }) => {
     const room = rooms[roomId];
     if (room?.members[socket.userId]) {
+      // 📊 Track room leave
+      trackRoomLeave(socket, roomId).catch(err => {
+        logger.error({ type: 'TRACK_LEAVE_FAILED', error: err.message });
+      });
+      
       delete room.members[socket.userId];
       socket.leave(roomId);
       
@@ -601,6 +642,11 @@ export default (io, socket) => {
       userName: room.members[socket.userId].name
     });
 
+    // 📊 Track call start
+    trackCallStart(socket, roomId).catch(err => {
+      logger.error({ type: 'TRACK_CALL_START_FAILED', error: err.message });
+    });
+
     // Tüm odaya bildir
     io.to(roomId).emit('roomUsers', getUsers(roomId));
     
@@ -625,6 +671,11 @@ export default (io, socket) => {
       roomId,
       userId: socket.userId,
       userName: room.members[socket.userId].name
+    });
+
+    // 📊 Track call end
+    trackCallEnd(socket, roomId).catch(err => {
+      logger.error({ type: 'TRACK_CALL_END_FAILED', error: err.message });
     });
 
     // Tüm odaya bildir
@@ -855,6 +906,11 @@ export default (io, socket) => {
       type: 'USER_DISCONNECTED',
       userId: socket.userId,
       socketId: socket.id
+    });
+
+    // 📊 Finalize tracking
+    finalizeTracking(socket).catch(err => {
+      logger.error({ type: 'TRACKING_FINALIZE_FAILED', error: err.message });
     });
 
     // Remove from socket mapping
