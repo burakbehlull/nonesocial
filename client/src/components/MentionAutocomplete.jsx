@@ -25,7 +25,7 @@ const MentionAutocomplete = ({
 
   return (
     <div
-      className="absolute z-50 w-72 bg-popover border border-border rounded-lg shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
+      className="absolute z-50 w-72 bg-popover border border-border rounded-lg shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
       style={{
         bottom: position?.bottom || 'auto',
         left: position?.left || 0,

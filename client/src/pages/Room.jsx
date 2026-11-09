@@ -807,7 +807,7 @@ export default function Room() {
 
           {/* Message Input - Premium with Mention Autocomplete */}
           <div className="p-4 border-t bg-card/30 backdrop-blur-sm relative">
-            {/* Mention Autocomplete Dropdown */}
+            {/* Mention Autocomplete Dropdown - Opens UPWARD */}
             {showMentions && (
               <div className="absolute bottom-full left-4 right-4 mb-2">
                 {filteredUsers.length > 0 ? (
@@ -819,7 +819,7 @@ export default function Room() {
                   />
                 ) : (
                   /* Empty State - Kullanıcı bulunamadı */
-                  <div className="w-72 bg-popover border border-border rounded-lg shadow-xl p-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="w-72 bg-popover border border-border rounded-lg shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="text-center">
                       <p className="text-sm text-muted-foreground">
                         "{mentionQuery}" ile eşleşen kullanıcı bulunamadı
