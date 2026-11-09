@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
-import { Crown, MessageSquare } from 'lucide-react';
+import { Crown, MessageSquare, ArrowDown } from 'lucide-react';
 
 const formatTime = (timestamp) => {
   const date = new Date(timestamp);
@@ -68,13 +68,34 @@ const parseMentions = (content, mentions = [], currentUserId) => {
 const ChatMessages = ({ messages, currentUserId }) => {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
+  // Scroll durumunu kontrol et
+  const handleScroll = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    
+    const isScrolledToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    setShowScrollButton(!isScrolledToBottom);
+  };
+
+  // Sadece yeni mesaj geldiğinde otomatik scroll
   useEffect(() => {
-    scrollToBottom();
+    // Kullanıcı scroll'u yukarıda tutuyorsa otomatik scroll yapma
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    
+    const isScrolledToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    
+    if (isScrolledToBottom) {
+      scrollToBottom();
+    }
   }, [messages]);
 
   // Group consecutive messages from the same user
@@ -107,23 +128,27 @@ const ChatMessages = ({ messages, currentUserId }) => {
 
   if (messages.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/5">
-        <div className="text-center p-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            <MessageSquare className="w-8 h-8 text-primary/50" />
+      <div className="relative flex-1 flex flex-col">
+        <div className="flex-1 flex items-center justify-center text-muted-foreground bg-muted/5">
+          <div className="text-center p-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
+              <MessageSquare className="w-8 h-8 text-primary/50" />
+            </div>
+            <p className="text-base font-semibold text-foreground/70">Henüz mesaj yok</p>
+            <p className="text-sm mt-2 text-muted-foreground">İlk mesajı gönderin!</p>
           </div>
-          <p className="text-base font-semibold text-foreground/70">Henüz mesaj yok</p>
-          <p className="text-sm mt-2 text-muted-foreground">İlk mesajı gönderin!</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div 
-      ref={messagesContainerRef} 
-      className="flex-1 overflow-y-auto px-6 py-4 space-y-3 scrollbar-thin"
-    >
+    <div className="relative flex-1 flex flex-col">
+      <div 
+        ref={messagesContainerRef} 
+        className="flex-1 overflow-y-auto px-6 py-4 space-y-3 scroll-smooth chat-scrollbar"
+        onScroll={handleScroll}
+      >
       {groupedMessages.map((group, groupIndex) => {
         const isOwner = group.role === 'owner';
         const isSelf = group.userId === currentUserId;
@@ -182,6 +207,18 @@ const ChatMessages = ({ messages, currentUserId }) => {
       {/* Auto scroll anchor */}
       <div ref={messagesEndRef} />
     </div>
+
+    {/* Scroll to Bottom Button */}
+    {showScrollButton && (
+      <button
+        onClick={scrollToBottom}
+        className="absolute bottom-6 right-6 p-3 rounded-full bg-primary text-primary-foreground shadow-premium-lg hover:scale-110 transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 z-10"
+        aria-label="En alta git"
+      >
+        <ArrowDown className="w-5 h-5" />
+      </button>
+    )}
+  </div>
   );
 };
 

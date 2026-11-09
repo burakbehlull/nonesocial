@@ -176,8 +176,8 @@
 /* Custom Scrollbar */
 @layer utilities {
   .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
@@ -185,11 +185,32 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-muted rounded-full;
+    @apply bg-primary/20 rounded-full;
+    transition: background-color 0.2s ease;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
+    @apply bg-primary/40;
+  }
+
+  /* Chat specific scrollbar - more visible */
+  .chat-scrollbar::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .chat-scrollbar::-webkit-scrollbar-track {
+    @apply bg-muted/20 rounded-lg;
+    margin: 8px 0;
+  }
+
+  .chat-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-primary/30 rounded-lg border-2 border-transparent;
+    background-clip: padding-box;
+    transition: all 0.2s ease;
+  }
+
+  .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/50;
   }
 
   /* Hide scrollbar but keep functionality */
