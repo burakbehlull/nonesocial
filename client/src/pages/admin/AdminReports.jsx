@@ -135,18 +135,6 @@ const AdminReports = () => {
     }
   };
 
-      if (data.success) {
-        toast.success('Yanıt gönderildi');
-        setShowModal(false);
-        loadReports();
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      toast.error('İşlem başarısız');
-    }
-  };
-
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
