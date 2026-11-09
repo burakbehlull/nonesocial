@@ -4,6 +4,7 @@ import { ThemeProvider } from '@contexts/ThemeContext'
 import Home from '@pages/Home'
 import Room from '@pages/Room'
 import Support from '@pages/Support'
+import ReportNew from '@pages/ReportNew'
 import WebRTCTest from '@pages/WebRTCTest'
 import NotFound from '@pages/NotFound'
 
@@ -48,6 +49,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/room/:roomId" element={<Room />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/report/new" element={<ReportNew />} />
           <Route path="/test" element={<WebRTCTest />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

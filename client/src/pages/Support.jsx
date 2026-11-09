@@ -311,6 +311,88 @@ const Support = () => {
             </Card>
           </section>
 
+          {/* Rapor Gönder */}
+          <section className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-red-500/20 to-red-500/10">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <h2 className="text-3xl font-bold">Kötüye Kullanım Bildir</h2>
+            </div>
+
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle>Rapor Gönderme</CardTitle>
+                <CardDescription>
+                  Platformda karşılaştığınız uygunsuz davranışları bize bildirin
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Spam, taciz, uygunsuz içerik veya diğer kötüye kullanımları raporlamak için:
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-primary">1</span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1 text-sm">Oda ID'sini Kopyalayın</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Oda sayfasındaki URL'den ID'yi kopyalayın (örn: /room/<strong>abc123</strong>)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-primary">2</span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1 text-sm">Kullanıcı ID'sini Alın</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Raporlamak istediğiniz kullanıcının ID'sini not edin
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-primary">3</span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1 text-sm">Rapor Formu</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Aşağıdaki butona tıklayarak rapor formunu doldurun
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <Link
+                    to="/report/new"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors font-semibold shadow-lg w-full justify-center"
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                    Rapor Gönder
+                  </Link>
+                </div>
+
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                  <Shield className="w-5 h-5 text-blue-500 mt-0.5" />
+                  <div className="space-y-1">
+                    <h3 className="font-semibold text-sm">Gizlilik Garantisi</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Raporlarınız tamamen gizli tutulur ve kimliğiniz rapor edilen kişiye bildirilmez.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
           {/* İletişim */}
           <section className="text-center py-8">
             <div className="max-w-2xl mx-auto space-y-4">
