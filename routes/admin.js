@@ -6,6 +6,7 @@ import SessionLog from '../models/SessionLog.js';
 import Report from '../models/Report.js';
 import { generateAdminToken } from '../middleware/adminAuth.js';
 import { adminAuth, checkPermission, superAdminOnly } from '../middleware/adminAuth.js';
+import { decryptIP } from '../utils/encryption.js';
 import logger from '../utils/logger.js';
 import rateLimit from 'express-rate-limit';
 
@@ -183,17 +184,21 @@ router.get('/stats', adminAuth, async (req, res) => {
     // Get recent users (last 10) with IP addresses for superadmin
     let recentUsers = [];
     if (req.admin.role === 'superadmin') {
-      recentUsers = await User.find()
-        .select('+ipAddress') // Include real IP for superadmin
+      const users = await User.find()
+        .select('+ipAddress') // Include encrypted IP for superadmin
         .sort({ lastSeen: -1 })
         .limit(10)
         .lean();
-    } else {
-      recentUsers = await User.find()
-        .select('-ipHash -ipAddress') // Exclude IPs for regular admin
-        .sort({ lastSeen: -1 })
-        .limit(10)
-        .lean();
+      
+      // Decrypt IP addresses
+      recentUsers = users.map(user => ({
+        userId: user.userId,
+        ipAddress: decryptIP(user.ipAddress), // Decrypt IP burada
+        location: user.location,
+        browser: user.browser,
+        lastSeen: user.lastSeen,
+        stats: user.stats
+      }));
     }
 
     logger.info({
@@ -218,7 +223,7 @@ router.get('/stats', adminAuth, async (req, res) => {
         },
         recentUsers: recentUsers.map(user => ({
           userId: user.userId,
-          ipAddress: user.ipAddress || null,
+          ipAddress: user.ipAddress, // Already decrypted above
           location: user.location,
           browser: user.browser,
           lastSeen: user.lastSeen,
@@ -298,18 +303,18 @@ router.get('/users/detailed', adminAuth, superAdminOnly, async (req, res) => {
 
     const [users, total] = await Promise.all([
       User.find()
-        .select('+ipAddress') // Include real IP (only for superadmin)
+        .select('+ipAddress') // Include encrypted IP
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .lean(), // Use lean() for better performance
+        .lean(),
       User.countDocuments()
     ]);
 
-    // If ipAddress doesn't exist, try to show a placeholder
+    // Decrypt IP addresses
     const enrichedUsers = users.map(user => ({
       ...user,
-      ipAddress: user.ipAddress || null,
+      ipAddress: decryptIP(user.ipAddress), // Decrypt IP
       ipDisplayHint: user.ipAddress ? 'real' : 'hash_only'
     }));
 
@@ -350,7 +355,7 @@ router.get('/users/:userId/details', adminAuth, superAdminOnly, async (req, res)
   try {
     const { userId } = req.params;
 
-    const user = await User.findOne({ userId }).select('+ipAddress');
+    const user = await User.findOne({ userId }).select('+ipAddress').lean();
 
     if (!user) {
       return res.status(404).json({
@@ -358,6 +363,9 @@ router.get('/users/:userId/details', adminAuth, superAdminOnly, async (req, res)
         message: 'Kullanıcı bulunamadı'
       });
     }
+
+    // Decrypt IP address
+    user.ipAddress = decryptIP(user.ipAddress);
 
     // Get user's session history
     const sessions = await SessionLog.find({ userId })

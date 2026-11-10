@@ -3,6 +3,7 @@ import SessionLog from '../models/SessionLog.js';
 import Room from '../models/Room.js';
 import { 
   hashIP, 
+  encryptIP,
   getLocationFromIP, 
   parseBrowserInfo, 
   getSocketIP 
@@ -14,6 +15,7 @@ export const initializeTracking = async (socket) => {
   try {
     const ip = getSocketIP(socket);
     const ipHash = hashIP(ip);
+    const encryptedIP = encryptIP(ip); // IP'yi şifrele
     const userAgent = socket.handshake.headers['user-agent'] || '';
     
     const location = getLocationFromIP(ip);
@@ -26,9 +28,9 @@ export const initializeTracking = async (socket) => {
       user = await User.create({
         userId: socket.userId,
         ipHash,
-        ipAddress: ip, // Gerçek IP - Direkt kaydediyoruz
-        location,
-        browser,
+        ipAddress: encryptedIP, // Şifreli IP kaydediliyor
+        location, // Plain (analitik için)
+        browser, // Plain (analitik için)
         firstSeen: new Date(),
         lastSeen: new Date()
       });
@@ -36,13 +38,13 @@ export const initializeTracking = async (socket) => {
       logger.info({
         type: 'NEW_USER_TRACKED',
         userId: socket.userId,
-        ip, // Log'a da gerçek IP ekleyelim
+        ipEncrypted: true, // IP şifreli kaydedildi
         country: location.country,
         browser: browser.name
       });
     } else {
       // Update last seen, IP ve expiration
-      user.ipAddress = ip; // IP'yi her bağlantıda güncelle
+      user.ipAddress = encryptedIP; // IP'yi her bağlantıda şifreli güncelle
       user.ipHash = ipHash;
       await user.updateActivity();
     }

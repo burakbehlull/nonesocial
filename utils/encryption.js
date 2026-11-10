@@ -1,7 +1,22 @@
 import crypto from 'crypto';
 
-const ENCRYPTION_KEY = process.env.IP_ENCRYPTION_KEY || crypto.randomBytes(32); // 32 bytes for AES-256
-const IV_LENGTH = 16; // For AES, this is always 16
+// Encryption key - 32 bytes for AES-256
+const ENCRYPTION_KEY = (() => {
+  if (process.env.IP_ENCRYPTION_KEY) {
+    // Eğer hex string ise (64 karakter)
+    if (process.env.IP_ENCRYPTION_KEY.length === 64) {
+      return Buffer.from(process.env.IP_ENCRYPTION_KEY, 'hex');
+    }
+    // Eğer text string ise, SHA-256 ile 32 byte'a çevir
+    return crypto.createHash('sha256')
+      .update(process.env.IP_ENCRYPTION_KEY)
+      .digest();
+  }
+  // Fallback: random key (development için)
+  return crypto.randomBytes(32);
+})();
+
+const IV_LENGTH = 16; // AES block size
 
 /**
  * Encrypt IP address (reversible)
@@ -10,14 +25,16 @@ const IV_LENGTH = 16; // For AES, this is always 16
  */
 export function encryptIP(ip) {
   try {
+    if (!ip) return null;
+    
     const iv = crypto.randomBytes(IV_LENGTH);
-    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), iv);
+    const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
     
-    let encrypted = cipher.update(ip);
-    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    let encrypted = cipher.update(ip, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
     
-    // Return format: iv:encryptedData (both base64)
-    return iv.toString('hex') + ':' + encrypted.toString('hex');
+    // Return format: iv:encryptedData (both hex)
+    return iv.toString('hex') + ':' + encrypted;
   } catch (error) {
     console.error('IP encryption error:', error);
     return null;
@@ -39,12 +56,12 @@ export function decryptIP(encryptedIP) {
     const iv = Buffer.from(parts[0], 'hex');
     const encryptedText = Buffer.from(parts[1], 'hex');
     
-    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), iv);
+    const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
     
-    let decrypted = decipher.update(encryptedText);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
     
-    return decrypted.toString();
+    return decrypted;
   } catch (error) {
     console.error('IP decryption error:', error);
     return null;
@@ -57,7 +74,7 @@ export function decryptIP(encryptedIP) {
  * @returns {string} - SHA256 hash
  */
 export function hashIP(ip) {
-  const salt = process.env.IP_SALT || 'default-salt';
+  const salt = process.env.IP_SALT || 'none-social-secret-salt-2024';
   return crypto
     .createHash('sha256')
     .update(ip + salt)

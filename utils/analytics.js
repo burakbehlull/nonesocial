@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import geoip from 'geoip-lite';
 import UAParser from 'ua-parser-js';
+import { encryptIP } from './encryption.js';
 
 // IP'yi hash'le (GDPR uyumluluğu için)
 export const hashIP = (ip) => {
@@ -84,3 +85,6 @@ export const getSocketIP = (socket) => {
          socket.conn.remoteAddress ||
          '127.0.0.1';
 };
+
+// Re-export encryption functions
+export { encryptIP } from './encryption.js';
