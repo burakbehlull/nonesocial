@@ -110,47 +110,47 @@ const ReportNew = () => {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
           <Link 
             to="/" 
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-lg">N</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-base sm:text-lg">N</span>
             </div>
-            <span className="text-xl font-bold gradient-text">None Social</span>
+            <span className="text-lg sm:text-xl font-bold gradient-text">None Social</span>
           </Link>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link 
               to="/support" 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors hidden xs:block"
             >
               Support
             </Link>
             <Link 
               to="/" 
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1 sm:gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm font-medium">Anasayfa</span>
+              <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm font-medium hidden xs:inline">Anasayfa</span>
             </Link>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 py-12 px-6">
-        <div className="max-w-3xl mx-auto space-y-8">
+      <main className="flex-1 py-8 sm:py-12 px-4 sm:px-6">
+        <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
           
           {/* Hero */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 mb-4">
-              <AlertTriangle className="w-4 h-4 text-red-500" />
-              <span className="text-sm font-semibold text-red-500">Rapor Gönder</span>
+          <div className="text-center space-y-3 sm:space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-red-500/10 border border-red-500/20 mb-2 sm:mb-4">
+              <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
+              <span className="text-xs sm:text-sm font-semibold text-red-500">Rapor Gönder</span>
             </div>
-            <h1 className="text-4xl font-bold gradient-text">Kötüye Kullanım Bildir</h1>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text px-4">Kötüye Kullanım Bildir</h1>
+            <p className="text-muted-foreground text-sm sm:text-base md:text-lg max-w-2xl mx-auto px-4">
               Platformda karşılaştığınız uygunsuz davranışları, spam veya kötüye kullanımı bildirin
             </p>
           </div>
@@ -202,14 +202,14 @@ const ReportNew = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
                 
                 {/* Category Selection */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <label className="text-sm font-semibold block">
                     Kategori <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                     {categories.map((cat) => {
                       const Icon = cat.icon;
                       return (
@@ -218,16 +218,16 @@ const ReportNew = () => {
                           type="button"
                           onClick={() => setFormData({ ...formData, category: cat.value })}
                           className={`
-                            p-4 rounded-lg border-2 transition-all text-left
+                            p-3 sm:p-4 rounded-lg border-2 transition-all text-left
                             ${formData.category === cat.value 
                               ? 'border-primary bg-primary/10' 
                               : 'border-border hover:border-primary/50 bg-card'
                             }
                           `}
                         >
-                          <div className="flex items-center gap-3">
-                            <Icon className={`w-5 h-5 ${cat.color}`} />
-                            <span className="font-medium text-sm">{cat.label}</span>
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${cat.color} flex-shrink-0`} />
+                            <span className="font-medium text-xs sm:text-sm">{cat.label}</span>
                           </div>
                         </button>
                       );
@@ -255,10 +255,10 @@ const ReportNew = () => {
                 </div>
 
                 {/* Room ID & User ID - At least one required */}
-                <div className="space-y-4 p-4 rounded-lg border-2 border-orange-500/20 bg-orange-500/5">
+                <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 rounded-lg border-2 border-orange-500/20 bg-orange-500/5">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5" />
-                    <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                    <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs sm:text-sm text-orange-600 dark:text-orange-400 font-medium">
                       Aşağıdaki alanlardan <strong>en az birini</strong> doldurun
                     </p>
                   </div>
@@ -334,11 +334,11 @@ const ReportNew = () => {
                   </label>
                   <textarea
                     id="description"
-                    rows={6}
+                    rows={5}
                     placeholder="Lütfen detaylı bir şekilde ne olduğunu anlatın..."
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg border border-border bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none"
                     required
                   />
                   <p className="text-xs text-muted-foreground">
@@ -364,19 +364,19 @@ const ReportNew = () => {
                 </div>
 
                 {/* Submit Button */}
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-4">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => navigate('/support')}
-                    className="flex-1"
+                    className="flex-1 text-sm sm:text-base"
                   >
                     İptal
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-1 shadow-lg"
+                    className="flex-1 shadow-lg text-sm sm:text-base"
                   >
                     {isSubmitting ? (
                       <>

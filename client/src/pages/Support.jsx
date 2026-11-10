@@ -12,50 +12,50 @@ const Support = () => {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header / Navbar */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <Link 
             to="/" 
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-lg">N</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-base sm:text-lg">N</span>
             </div>
-            <span className="text-xl font-bold gradient-text">None Social</span>
+            <span className="text-lg sm:text-xl font-bold gradient-text">None Social</span>
           </Link>
           
           <Link 
             to="/" 
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 sm:gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Anasayfa</span>
+            <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="text-xs sm:text-sm font-medium hidden xs:inline">Anasayfa</span>
           </Link>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 py-12 px-6">
-        <div className="max-w-4xl mx-auto space-y-12">
+      <main className="flex-1 py-8 sm:py-12 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto space-y-8 sm:space-y-12">
           
           {/* Hero Section */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
-              <Info className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold text-primary">Destek & Bilgilendirme</span>
+          <div className="text-center space-y-3 sm:space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 border border-primary/20 mb-2 sm:mb-4">
+              <Info className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+              <span className="text-xs sm:text-sm font-semibold text-primary">Destek & Bilgilendirme</span>
             </div>
-            <h1 className="text-5xl font-bold gradient-text">Support</h1>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold gradient-text">Support</h1>
+            <p className="text-muted-foreground text-sm sm:text-base md:text-lg max-w-2xl mx-auto px-4">
               None Social platformunda toplanan veriler, gizlilik politikamız ve veri saklama süreleri hakkında detaylı bilgiler
             </p>
           </div>
 
           {/* Veri Gizliliği */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
-                <Shield className="w-6 h-6 text-primary" />
+          <section className="space-y-4 sm:space-y-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <h2 className="text-3xl font-bold">Veri Gizliliği</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold">Veri Gizliliği</h2>
             </div>
             
             <Card className="border-border/50">
@@ -106,15 +106,15 @@ const Support = () => {
           </section>
 
           {/* Toplanan Veriler */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/10">
-                <Database className="w-6 h-6 text-purple-500" />
+          <section className="space-y-4 sm:space-y-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/10">
+                <Database className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
               </div>
-              <h2 className="text-3xl font-bold">Toplanan Veriler</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold">Toplanan Veriler</h2>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
               <Card className="border-border/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -195,12 +195,12 @@ const Support = () => {
           </section>
 
           {/* Veri Saklama Süreleri */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-success/20 to-success/10">
-                <Clock className="w-6 h-6 text-success" />
+          <section className="space-y-4 sm:space-y-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-success/20 to-success/10">
+                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
               </div>
-              <h2 className="text-3xl font-bold">Veri Saklama Süreleri</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold">Veri Saklama Süreleri</h2>
             </div>
 
             <Card className="border-border/50">
@@ -211,43 +211,43 @@ const Support = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-4 p-4 rounded-lg border border-border/50 bg-card">
-                    <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-primary/10 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-bold text-primary">7</span>
-                      <span className="text-xs text-muted-foreground">gün</span>
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-border/50 bg-card">
+                    <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-primary/10 flex flex-col items-center justify-center">
+                      <span className="text-xl sm:text-2xl font-bold text-primary">7</span>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground">gün</span>
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold mb-1">Oturum Kayıtları</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold mb-1 text-sm sm:text-base">Oturum Kayıtları</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Bağlantı logları, ziyaret edilen odalar, session events gibi geçici veriler 
                         <strong> 7 gün</strong> sonra otomatik silinir.
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4 p-4 rounded-lg border border-border/50 bg-card">
-                    <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-purple-500/10 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-bold text-purple-500">30</span>
-                      <span className="text-xs text-muted-foreground">gün</span>
+                  <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-border/50 bg-card">
+                    <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-purple-500/10 flex flex-col items-center justify-center">
+                      <span className="text-xl sm:text-2xl font-bold text-purple-500">30</span>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground">gün</span>
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold mb-1">Oda Geçmişi</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold mb-1 text-sm sm:text-base">Oda Geçmişi</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Oda bilgileri, üye kayıtları ve istatistikler 
                         <strong> 30 gün</strong> sonra kalıcı olarak silinir.
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4 p-4 rounded-lg border border-border/50 bg-card">
-                    <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-success/10 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-bold text-success">90</span>
-                      <span className="text-xs text-muted-foreground">gün</span>
+                  <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-border/50 bg-card">
+                    <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-success/10 flex flex-col items-center justify-center">
+                      <span className="text-xl sm:text-2xl font-bold text-success">90</span>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground">gün</span>
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold mb-1">Kullanıcı Verileri</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold mb-1 text-sm sm:text-base">Kullanıcı Verileri</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Kullanıcı istatistikleri, konum ve tarayıcı bilgileri inactive kullanıcılar için 
                         <strong> 90 gün</strong> sonra otomatik silinir.
                       </p>
@@ -258,13 +258,13 @@ const Support = () => {
             </Card>
           </section>
 
-          {/* Ek Bilgiler */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10">
-                <Info className="w-6 h-6 text-blue-500" />
+          {/* Önemli Notlar */}
+          <section className="space-y-4 sm:space-y-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10">
+                <Info className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
               </div>
-              <h2 className="text-3xl font-bold">Önemli Notlar</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold">Önemli Notlar</h2>
             </div>
 
             <Card className="border-border/50 bg-muted/50">
@@ -313,12 +313,12 @@ const Support = () => {
           </section>
 
           {/* Rapor Gönder */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-red-500/20 to-red-500/10">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
+          <section className="space-y-4 sm:space-y-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-red-500/20 to-red-500/10">
+                <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" />
               </div>
-              <h2 className="text-3xl font-bold">Kötüye Kullanım Bildir</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold">Kötüye Kullanım Bildir</h2>
             </div>
 
             <Card className="border-border/50">
@@ -371,10 +371,10 @@ const Support = () => {
                   </div>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-3 sm:pt-4">
                   <Link
                     to="/report/new"
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors font-semibold shadow-lg w-full justify-center"
+                    className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors font-semibold shadow-lg w-full justify-center text-sm sm:text-base"
                   >
                     <AlertTriangle className="w-4 h-4" />
                     Rapor Gönder
@@ -395,16 +395,16 @@ const Support = () => {
           </section>
 
           {/* İletişim */}
-          <section className="text-center py-8">
-            <div className="max-w-2xl mx-auto space-y-4">
-              <h3 className="text-2xl font-bold">Sorularınız mı var?</h3>
-              <p className="text-muted-foreground">
+          <section className="text-center py-6 sm:py-8">
+            <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4 px-4">
+              <h3 className="text-xl sm:text-2xl font-bold">Sorularınız mı var?</h3>
+              <p className="text-sm sm:text-base text-muted-foreground">
                 Veri gizliliği ve güvenlik hakkında daha fazla bilgi almak için 
                 bizimle iletişime geçebilirsiniz.
               </p>
               <Link 
                 to="/"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold shadow-lg"
+                className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold shadow-lg text-sm sm:text-base"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Anasayfaya Dön

@@ -14,7 +14,22 @@ const AdminDashboard = () => {
   const [admin, setAdmin] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobilde kapalı başlasın
+
+  // Ekran boyutu değişimini dinle
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) { // lg breakpoint
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    handleResize(); // İlk yükleme
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     checkAuth();
@@ -82,76 +97,97 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside className={`
         fixed top-0 left-0 h-full bg-slate-900/95 backdrop-blur-sm border-r border-border/50 
-        transition-all duration-300 z-40
-        ${sidebarOpen ? 'w-64' : 'w-0'}
+        transition-transform duration-300 z-40 w-64
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className={`h-full flex flex-col ${sidebarOpen ? '' : 'hidden'}`}>
+        <div className="h-full flex flex-col">
           {/* Logo */}
-          <div className="p-6 border-b border-border/50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
+          <div className="p-4 sm:p-6 border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center">
+                  <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="font-bold text-base sm:text-lg">Admin Panel</h1>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">NoneSocial</p>
+                </div>
               </div>
-              <div>
-                <h1 className="font-bold text-lg">Admin Panel</h1>
-                <p className="text-xs text-muted-foreground">NoneSocial</p>
-              </div>
+              <button 
+                className="lg:hidden p-1 hover:bg-muted rounded"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-3 sm:p-4 space-y-1 sm:space-y-2 overflow-y-auto">
             <Link
               to="/admin/dashboard"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 border border-primary/20 text-primary font-medium"
+              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg bg-primary/10 border border-primary/20 text-primary font-medium text-sm"
+              onClick={() => window.innerWidth < 1024 && setSidebarOpen(false)}
             >
-              <Activity className="w-5 h-5" />
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
               Dashboard
             </Link>
             <Link
               to="/admin/users"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground text-sm"
+              onClick={() => window.innerWidth < 1024 && setSidebarOpen(false)}
             >
-              <Users className="w-5 h-5" />
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
               Kullanıcılar
             </Link>
             {admin?.role === 'superadmin' && (
               <Link
                 to="/admin/users/detailed"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground border-l-2 border-orange-500 ml-2"
+                className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground border-l-2 border-orange-500 ml-2 text-sm"
+                onClick={() => window.innerWidth < 1024 && setSidebarOpen(false)}
               >
-                <Shield className="w-5 h-5 text-orange-500" />
-                <span className="text-sm">Detaylı Kullanıcılar</span>
+                <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
+                <span className="text-xs sm:text-sm">Detaylı Kullanıcılar</span>
               </Link>
             )}
             <Link
               to="/admin/rooms"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground text-sm"
+              onClick={() => window.innerWidth < 1024 && setSidebarOpen(false)}
             >
-              <Video className="w-5 h-5" />
+              <Video className="w-4 h-4 sm:w-5 sm:h-5" />
               Odalar
             </Link>
             <Link
               to="/admin/reports"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground text-sm"
+              onClick={() => window.innerWidth < 1024 && setSidebarOpen(false)}
             >
-              <AlertCircle className="w-5 h-5" />
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" />
               Raporlar
             </Link>
           </nav>
 
           {/* User Info & Logout */}
-          <div className="p-4 border-t border-border/50">
-            <div className="mb-3 p-3 rounded-lg bg-muted/50">
-              <p className="text-sm font-semibold">{admin?.username}</p>
-              <p className="text-xs text-muted-foreground capitalize">{admin?.role}</p>
+          <div className="p-3 sm:p-4 border-t border-border/50">
+            <div className="mb-2 sm:mb-3 p-2 sm:p-3 rounded-lg bg-muted/50">
+              <p className="text-xs sm:text-sm font-semibold truncate">{admin?.username}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground capitalize">{admin?.role}</p>
             </div>
             <Button
               variant="ghost"
-              className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-500/10"
+              className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-500/10 text-sm"
               onClick={handleLogout}
             >
               <LogOut className="w-4 h-4 mr-2" />
@@ -162,38 +198,38 @@ const AdminDashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <main className="lg:ml-64">
         {/* Header */}
-        <header className="bg-slate-900/50 backdrop-blur-sm border-b border-border/50 sticky top-0 z-30">
-          <div className="px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <header className="bg-slate-900/50 backdrop-blur-sm border-b border-border/50 sticky top-0 z-20">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-muted rounded-lg transition-colors"
               >
-                {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                <Menu className="w-5 h-5" />
               </button>
-              <h2 className="text-2xl font-bold">Dashboard</h2>
+              <h2 className="text-lg sm:text-2xl font-bold">Dashboard</h2>
             </div>
-            <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
               ← Anasayfaya Dön
             </Link>
           </div>
         </header>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {/* Total Users */}
             <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardDescription>Toplam Kullanıcı</CardDescription>
-                <CardTitle className="text-3xl font-bold">{stats?.total.users || 0}</CardTitle>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardDescription className="text-xs sm:text-sm">Toplam Kullanıcı</CardDescription>
+                <CardTitle className="text-2xl sm:text-3xl font-bold">{stats?.total.users || 0}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <TrendingUp className="w-4 h-4 text-green-500" />
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
                   <span>Son 24 saat: {stats?.last24h.newUsers || 0}</span>
                 </div>
               </CardContent>
@@ -201,13 +237,13 @@ const AdminDashboard = () => {
 
             {/* Total Rooms */}
             <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardDescription>Toplam Oda</CardDescription>
-                <CardTitle className="text-3xl font-bold">{stats?.total.rooms || 0}</CardTitle>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardDescription className="text-xs sm:text-sm">Toplam Oda</CardDescription>
+                <CardTitle className="text-2xl sm:text-3xl font-bold">{stats?.total.rooms || 0}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <TrendingUp className="w-4 h-4 text-green-500" />
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
                   <span>Son 24 saat: {stats?.last24h.newRooms || 0}</span>
                 </div>
               </CardContent>
@@ -215,13 +251,13 @@ const AdminDashboard = () => {
 
             {/* Active Sessions */}
             <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardDescription>Aktif Oturum</CardDescription>
-                <CardTitle className="text-3xl font-bold">{stats?.total.activeSessions || 0}</CardTitle>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardDescription className="text-xs sm:text-sm">Aktif Oturum</CardDescription>
+                <CardTitle className="text-2xl sm:text-3xl font-bold">{stats?.total.activeSessions || 0}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Activity className="w-4 h-4 text-blue-500" />
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
                   <span>Şu anda aktif</span>
                 </div>
               </CardContent>
@@ -229,13 +265,13 @@ const AdminDashboard = () => {
 
             {/* Total Admins */}
             <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardDescription>Toplam Admin</CardDescription>
-                <CardTitle className="text-3xl font-bold">{stats?.total.admins || 0}</CardTitle>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardDescription className="text-xs sm:text-sm">Toplam Admin</CardDescription>
+                <CardTitle className="text-2xl sm:text-3xl font-bold">{stats?.total.admins || 0}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Shield className="w-4 h-4 text-orange-500" />
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500" />
                   <span>Aktif yönetici</span>
                 </div>
               </CardContent>
@@ -248,32 +284,32 @@ const AdminDashboard = () => {
               <CardTitle>Hızlı İşlemler</CardTitle>
               <CardDescription>Sık kullanılan yönetim işlemleri</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               <Link to="/admin/users">
-                <Button variant="outline" className="w-full justify-start h-auto py-4">
-                  <Users className="w-5 h-5 mr-3" />
+                <Button variant="outline" className="w-full justify-start h-auto py-3 sm:py-4 text-sm">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" />
                   <div className="text-left">
-                    <div className="font-semibold">Kullanıcıları Yönet</div>
-                    <div className="text-xs text-muted-foreground">Ban, unban ve detaylar</div>
+                    <div className="font-semibold text-xs sm:text-sm">Kullanıcıları Yönet</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground">Ban, unban ve detaylar</div>
                   </div>
                 </Button>
               </Link>
 
               <Link to="/admin/rooms">
-                <Button variant="outline" className="w-full justify-start h-auto py-4">
-                  <Video className="w-5 h-5 mr-3" />
+                <Button variant="outline" className="w-full justify-start h-auto py-3 sm:py-4 text-sm">
+                  <Video className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" />
                   <div className="text-left">
-                    <div className="font-semibold">Odaları Yönet</div>
-                    <div className="text-xs text-muted-foreground">Oda listesi ve silme</div>
+                    <div className="font-semibold text-xs sm:text-sm">Odaları Yönet</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground">Oda listesi ve silme</div>
                   </div>
                 </Button>
               </Link>
 
-              <Button variant="outline" className="w-full justify-start h-auto py-4" disabled>
-                <AlertCircle className="w-5 h-5 mr-3" />
+              <Button variant="outline" className="w-full justify-start h-auto py-3 sm:py-4 text-sm" disabled>
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" />
                 <div className="text-left">
-                  <div className="font-semibold">Raporlar</div>
-                  <div className="text-xs text-muted-foreground">Yakında eklenecek</div>
+                  <div className="font-semibold text-xs sm:text-sm">Raporlar</div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">Yakında eklenecek</div>
                 </div>
               </Button>
             </CardContent>
@@ -335,25 +371,25 @@ const AdminDashboard = () => {
               <CardContent>
                 <div className="space-y-3">
                   {stats.recentUsers.map((user, index) => (
-                    <div key={user.userId} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary font-semibold text-sm">
+                    <div key={user.userId} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/20 text-primary font-semibold text-xs sm:text-sm flex-shrink-0">
                         {index + 1}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                      <div className="flex-1 min-w-0 w-full sm:w-auto">
+                        <code className="text-[10px] sm:text-xs font-mono bg-muted px-1.5 sm:px-2 py-0.5 sm:py-1 rounded break-all">
                           {user.userId}
                         </code>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-[10px] sm:text-xs text-muted-foreground">
                           <span>{user.location?.city}, {user.location?.country}</span>
                           <span>•</span>
                           <span>{user.browser?.name}</span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <code className="text-xs bg-orange-500/10 text-orange-500 px-2 py-1 rounded border border-orange-500/20 font-mono">
+                      <div className="flex flex-col items-start sm:items-end gap-1 w-full sm:w-auto">
+                        <code className="text-[10px] sm:text-xs bg-orange-500/10 text-orange-500 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-orange-500/20 font-mono">
                           {user.ipAddress || 'N/A'}
                         </code>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">
                           {user.lastSeen ? new Date(user.lastSeen).toLocaleTimeString('tr-TR', { 
                             hour: '2-digit', 
                             minute: '2-digit' 
@@ -363,8 +399,8 @@ const AdminDashboard = () => {
                     </div>
                   ))}
                 </div>
-                <Link to="/admin/users/detailed" className="block mt-4">
-                  <Button variant="outline" className="w-full">
+                <Link to="/admin/users/detailed" className="block mt-3 sm:mt-4">
+                  <Button variant="outline" className="w-full text-sm">
                     Tümünü Gör →
                   </Button>
                 </Link>
