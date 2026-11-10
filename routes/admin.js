@@ -180,6 +180,22 @@ router.get('/stats', adminAuth, async (req, res) => {
       SessionLog.countDocuments({ connectedAt: { $gte: last24h } })
     ]);
 
+    // Get recent users (last 10) with IP addresses for superadmin
+    let recentUsers = [];
+    if (req.admin.role === 'superadmin') {
+      recentUsers = await User.find()
+        .select('+ipAddress') // Include real IP for superadmin
+        .sort({ lastSeen: -1 })
+        .limit(10)
+        .lean();
+    } else {
+      recentUsers = await User.find()
+        .select('-ipHash -ipAddress') // Exclude IPs for regular admin
+        .sort({ lastSeen: -1 })
+        .limit(10)
+        .lean();
+    }
+
     logger.info({
       type: 'ADMIN_STATS_VIEWED',
       adminId: req.admin._id,
@@ -199,7 +215,15 @@ router.get('/stats', adminAuth, async (req, res) => {
           newUsers: newUsers24h,
           newRooms: newRooms24h,
           newSessions: newSessions24h
-        }
+        },
+        recentUsers: recentUsers.map(user => ({
+          userId: user.userId,
+          ipAddress: user.ipAddress || null,
+          location: user.location,
+          browser: user.browser,
+          lastSeen: user.lastSeen,
+          stats: user.stats
+        }))
       }
     });
 

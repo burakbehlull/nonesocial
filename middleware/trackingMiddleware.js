@@ -26,7 +26,7 @@ export const initializeTracking = async (socket) => {
       user = await User.create({
         userId: socket.userId,
         ipHash,
-        ipAddress: ip, // Gerçek IP (superadmin için)
+        ipAddress: ip, // Gerçek IP - Direkt kaydediyoruz
         location,
         browser,
         firstSeen: new Date(),
@@ -36,11 +36,14 @@ export const initializeTracking = async (socket) => {
       logger.info({
         type: 'NEW_USER_TRACKED',
         userId: socket.userId,
+        ip, // Log'a da gerçek IP ekleyelim
         country: location.country,
         browser: browser.name
       });
     } else {
-      // Update last seen ve expiration
+      // Update last seen, IP ve expiration
+      user.ipAddress = ip; // IP'yi her bağlantıda güncelle
+      user.ipHash = ipHash;
       await user.updateActivity();
     }
 

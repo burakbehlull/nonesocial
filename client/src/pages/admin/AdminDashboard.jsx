@@ -320,6 +320,57 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Recent Users - Superadmin Only */}
+          {admin?.role === 'superadmin' && stats?.recentUsers && stats.recentUsers.length > 0 && (
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-orange-500" />
+                  Son Kullanıcılar
+                  <span className="ml-auto text-xs font-normal text-muted-foreground">Superadmin</span>
+                </CardTitle>
+                <CardDescription>Son 10 aktif kullanıcı ve IP adresleri</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {stats.recentUsers.map((user, index) => (
+                    <div key={user.userId} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary font-semibold text-sm">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                          {user.userId}
+                        </code>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <span>{user.location?.city}, {user.location?.country}</span>
+                          <span>•</span>
+                          <span>{user.browser?.name}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <code className="text-xs bg-orange-500/10 text-orange-500 px-2 py-1 rounded border border-orange-500/20 font-mono">
+                          {user.ipAddress || 'N/A'}
+                        </code>
+                        <span className="text-xs text-muted-foreground">
+                          {user.lastSeen ? new Date(user.lastSeen).toLocaleTimeString('tr-TR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          }) : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Link to="/admin/users/detailed" className="block mt-4">
+                  <Button variant="outline" className="w-full">
+                    Tümünü Gör →
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
     </div>
