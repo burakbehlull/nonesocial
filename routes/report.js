@@ -3,6 +3,12 @@ import Report from '../models/Report.js';
 import { hashIP, getSocketIP } from '../utils/analytics.js';
 import logger from '../utils/logger.js';
 import rateLimit from 'express-rate-limit';
+import { 
+  sanitizeString, 
+  sanitizeEmail, 
+  sanitizeRoomId, 
+  sanitizeUserId 
+} from '../utils/sanitize.js';
 
 const router = express.Router();
 
@@ -18,27 +24,78 @@ const reportLimiter = rateLimit({
 // Create report (public endpoint)
 router.post('/create', reportLimiter, async (req, res) => {
   try {
-    const { category, subject, roomId, userId, description, email } = req.body;
+    // Sanitize and validate inputs
+    const validCategories = ['harassment', 'abuse', 'spam', 'inappropriate', 'illegal', 'other'];
+    
+    let category, subject, description, roomId, userId, email, reporterUserId;
 
-    // Validation
-    if (!category || !subject || !description) {
-      return res.status(400).json({
-        success: false,
-        message: 'Kategori, konu ve açıklama gerekli'
+    try {
+      // Validate category (enum)
+      category = req.body.category?.toLowerCase().trim();
+      if (!category || !validCategories.includes(category)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Geçersiz kategori'
+        });
+      }
+
+      // Sanitize subject
+      if (!req.body.subject) {
+        return res.status(400).json({
+          success: false,
+          message: 'Konu gerekli'
+        });
+      }
+      subject = sanitizeString(req.body.subject, {
+        maxLength: 200,
+        minLength: 3
       });
-    }
 
-    if (!roomId && !userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Oda ID veya Kullanıcı ID gerekli'
+      // Sanitize description
+      if (!req.body.description) {
+        return res.status(400).json({
+          success: false,
+          message: 'Açıklama gerekli'
+        });
+      }
+      description = sanitizeString(req.body.description, {
+        minLength: 10,
+        maxLength: 2000,
+        allowNewlines: true
       });
-    }
 
-    if (description.length < 10) {
+      // Validate at least one target
+      if (!req.body.roomId && !req.body.userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Oda ID veya Kullanıcı ID gerekli'
+        });
+      }
+
+      // Sanitize roomId if provided
+      if (req.body.roomId) {
+        roomId = sanitizeRoomId(req.body.roomId);
+      }
+
+      // Sanitize userId if provided
+      if (req.body.userId) {
+        userId = sanitizeUserId(req.body.userId);
+      }
+
+      // Sanitize reporter userId if provided
+      if (req.body.reporterUserId) {
+        reporterUserId = sanitizeUserId(req.body.reporterUserId);
+      }
+
+      // Sanitize email if provided
+      if (req.body.email) {
+        email = sanitizeEmail(req.body.email);
+      }
+
+    } catch (validationError) {
       return res.status(400).json({
         success: false,
-        message: 'Açıklama en az 10 karakter olmalıdır'
+        message: validationError.message || 'Geçersiz veri'
       });
     }
 
@@ -63,7 +120,7 @@ router.post('/create', reportLimiter, async (req, res) => {
       roomId: roomId || undefined,
       userId: userId || undefined,
       reportedBy: {
-        userId: req.body.reporterUserId, // Opsiyonel, frontend'den gönderilirse
+        userId: reporterUserId || undefined,
         ipHash,
         email: email || undefined
       },
@@ -90,9 +147,11 @@ router.post('/create', reportLimiter, async (req, res) => {
   } catch (error) {
     logger.error({
       type: 'REPORT_CREATE_ERROR',
-      error: error.message
+      error: error.message,
+      stack: error.stack
     });
 
+    // Don't expose internal errors
     res.status(500).json({
       success: false,
       message: 'Sunucu hatası'

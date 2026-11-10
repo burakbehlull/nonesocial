@@ -9,6 +9,14 @@ import { adminAuth, checkPermission, superAdminOnly } from '../middleware/adminA
 import { decryptIP } from '../utils/encryption.js';
 import logger from '../utils/logger.js';
 import rateLimit from 'express-rate-limit';
+import { 
+  sanitizeString, 
+  sanitizeObjectId,
+  sanitizeReportStatus,
+  sanitizeAdminNote,
+  sanitizePagination,
+  sanitizeSort
+} from '../utils/sanitize.js';
 
 const router = express.Router();
 
@@ -26,12 +34,31 @@ const loginLimiter = rateLimit({
 // Admin login
 router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { username, password } = req.body;
+    let username, password;
 
-    if (!username || !password) {
+    try {
+      // Sanitize inputs
+      if (!req.body.username || !req.body.password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Kullanıcı adı ve şifre gerekli' 
+        });
+      }
+
+      username = sanitizeString(req.body.username, { maxLength: 50 }).toLowerCase();
+      password = req.body.password; // Don't sanitize password, just validate length
+
+      if (password.length < 8 || password.length > 128) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Geçersiz şifre formatı' 
+        });
+      }
+
+    } catch (validationError) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Kullanıcı adı ve şifre gerekli' 
+        message: 'Geçersiz veri' 
       });
     }
 
@@ -742,16 +769,34 @@ router.get('/reports/:id', adminAuth, checkPermission('viewReports'), async (req
 // Update report status
 router.patch('/reports/:id/status', adminAuth, checkPermission('viewReports'), async (req, res) => {
   try {
-    const { status, adminNotes } = req.body;
+    let reportId, status, adminNotes;
 
-    if (!['pending', 'reviewed', 'resolved', 'rejected'].includes(status)) {
+    try {
+      // Sanitize report ID
+      reportId = sanitizeObjectId(req.params.id);
+
+      // Sanitize status
+      if (!req.body.status) {
+        return res.status(400).json({
+          success: false,
+          message: 'Durum gerekli'
+        });
+      }
+      status = sanitizeReportStatus(req.body.status);
+
+      // Sanitize admin notes if provided
+      if (req.body.adminNotes) {
+        adminNotes = sanitizeAdminNote(req.body.adminNotes);
+      }
+
+    } catch (validationError) {
       return res.status(400).json({
         success: false,
-        message: 'Geçersiz durum'
+        message: validationError.message || 'Geçersiz veri'
       });
     }
 
-    const report = await Report.findById(req.params.id);
+    const report = await Report.findById(reportId);
 
     if (!report) {
       return res.status(404).json({
@@ -784,6 +829,7 @@ router.patch('/reports/:id/status', adminAuth, checkPermission('viewReports'), a
     logger.error({
       type: 'ADMIN_REPORT_UPDATE_ERROR',
       error: error.message,
+      stack: error.stack,
       adminId: req.admin._id
     });
     

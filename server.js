@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
 import dotenv from 'dotenv';
 import eventLoader from './events/eventLoader.js';
 import logger from './utils/logger.js';
@@ -89,7 +90,21 @@ app.use((req, res, next) => {
   }
   next();
 });
+
 app.use(express.json({ limit: '10kb' })); // Limit request body size
+
+// Security: NoSQL injection prevention
+app.use(mongoSanitize({
+  replaceWith: '_',
+  onSanitize: ({ req, key }) => {
+    logger.warn({
+      type: 'NOSQL_INJECTION_ATTEMPT',
+      ip: req.ip,
+      path: req.path,
+      sanitizedKey: key
+    });
+  }
+}));
 
 // Security: Rate limiting for HTTP endpoints
 const apiLimiter = rateLimit({
