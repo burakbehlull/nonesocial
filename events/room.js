@@ -921,6 +921,51 @@ export default async (io, socket) => {
 
   // ===== End Socket Audio Events =====
 
+  // ===== Typing Indicator Events =====
+  
+  // Kullanıcı yazmaya başladı
+  socket.on('startTyping', ({ roomId }) => {
+    const room = rooms[roomId];
+    if (!room || !room.members[socket.userId]) {
+      return;
+    }
+
+    const member = room.members[socket.userId];
+    
+    // Diğer kullanıcılara bildir
+    socket.to(roomId).emit('userTyping', {
+      userId: socket.userId,
+      name: member.name
+    });
+
+    logger.debug({
+      type: 'USER_TYPING',
+      roomId,
+      userId: socket.userId
+    });
+  });
+
+  // Kullanıcı yazmayı bıraktı
+  socket.on('stopTyping', ({ roomId }) => {
+    const room = rooms[roomId];
+    if (!room || !room.members[socket.userId]) {
+      return;
+    }
+
+    // Diğer kullanıcılara bildir
+    socket.to(roomId).emit('userStoppedTyping', {
+      userId: socket.userId
+    });
+
+    logger.debug({
+      type: 'USER_STOPPED_TYPING',
+      roomId,
+      userId: socket.userId
+    });
+  });
+
+  // ===== End Typing Indicator Events =====
+
   // ===== End WebRTC Signaling =====
 
   // Handle disconnect

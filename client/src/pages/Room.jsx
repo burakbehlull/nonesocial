@@ -3,11 +3,13 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getSocket } from '@services/socket';
 import { useSocketAudio } from '@hooks/useSocketAudio';
+import { useTypingIndicator } from '@hooks/useTypingIndicator';
 import { useRoomStore } from '@store/roomStore';
 import { useTheme } from '@contexts/ThemeContext';
 import UserBubbles from '@components/UserBubbles';
 import ChatMessages from '@components/ChatMessages';
 import MentionAutocomplete from '@components/MentionAutocomplete';
+import TypingIndicator from '@components/TypingIndicator';
 import { Card } from '@components/ui/card';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
@@ -72,6 +74,9 @@ export default function Room() {
     joinCall,
     leaveCall
   } = useSocketAudio(roomId);
+  
+  // 🔥 Typing Indicator Hook
+  const { typingUsers, startTyping, stopTyping } = useTypingIndicator(roomId, 3000);
   
   // ⚠️ DUPLICATE FIX: Aynı currentUserId ile birden fazla user varsa sadece birini al
   const users = useMemo(() => {
@@ -258,6 +263,9 @@ export default function Room() {
   const handleSendMessage = () => {
     if (!messageInput.trim() || !socket) return;
     
+    // Stop typing indicator when sending
+    stopTyping();
+    
     socket.emit('sendMessage', { roomId, message: messageInput }, (response) => {
       if (response?.success) {
         setMessageInput('');
@@ -274,6 +282,13 @@ export default function Room() {
     const cursorPos = e.target.selectionStart;
     
     setMessageInput(value);
+
+    // 🔥 Typing indicator: Start typing on input
+    if (value.trim().length > 0) {
+      startTyping();
+    } else {
+      stopTyping();
+    }
 
     // @ karakterini ara
     const textBeforeCursor = value.slice(0, cursorPos);
@@ -794,8 +809,16 @@ export default function Room() {
           </div>
           
           {/* Messages */}
-          <div className="flex-1 overflow-hidden">
-            <ChatMessages messages={messages} currentUserId={currentUserId} />
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <ChatMessages messages={messages} currentUserId={currentUserId} />
+            </div>
+            
+            {/* Typing Indicator */}
+            <TypingIndicator 
+              typingUsers={typingUsers} 
+              currentUserId={currentUserId} 
+            />
           </div>
 
           {/* Message Input - Premium with Mention Autocomplete - Mobile Responsive */}
