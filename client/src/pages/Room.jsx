@@ -608,10 +608,9 @@ export default function Room() {
           <IconButton
             variant="ghost"
             onClick={() => setShowSettingsModal(true)}
-            tooltip="Ayarlar (Klavye kısayolları)"
-            className="hidden sm:flex"
+            tooltip="Ayarlar"
           >
-            <Settings className="w-4 h-4 md:w-5 md:h-5" />
+            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
           </IconButton>
 
           {/* Theme Toggle */}
