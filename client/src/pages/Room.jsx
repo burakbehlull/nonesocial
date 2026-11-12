@@ -960,22 +960,6 @@ export default function Room() {
             </div>
             
             <div className="space-y-2">
-              {/* Debug: User List */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mb-2 p-2 bg-blue-500/10 rounded text-[9px] font-mono space-y-1">
-                  <div className="font-bold text-blue-600 dark:text-blue-400">SAĞ PANEL (Katılımcılar)</div>
-                  <div>currentUserId: <span className="text-green-600">{currentUserId?.slice(0, 12)}</span></div>
-                  <div>users.length: {users.length}</div>
-                  <div className="mt-1 pt-1 border-t border-blue-500/20 text-[8px] space-y-0.5">
-                    {users.map((u, i) => (
-                      <div key={i} className={u.id === currentUserId ? 'text-green-600 font-bold' : ''}>
-                        {i+1}. {u.name} | {u.id.slice(0, 10)} {u.id === currentUserId ? '✓SEN' : ''}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
               {users.map((user) => {
                 const isSelf = user.id === currentUserId;
                 const userIsOwner = user.role === 'owner';
@@ -1186,22 +1170,38 @@ export default function Room() {
           </Card>
         </div>
       )}
-    </div>
-  );
-
-}
-
       
       {/* Settings Modal */}
       <SettingsModal 
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
-        shortcuts={shortcuts}
+        shortcuts={shortcuts || {
+          toggleMic: 'm',
+          toggleVideo: 'v',
+          toggleScreenShare: 's',
+          pushToTalk: ' ',
+          showHelp: '?',
+          closeModal: 'Escape',
+          sendMessage: 'Enter',
+          search: 'k'
+        }}
       />
       
       {/* Shortcuts Help Modal (? key) */}
       <ShortcutsHelpModal
         isOpen={showShortcutsHelp}
         onClose={() => setShowShortcutsHelp(false)}
-        shortcuts={shortcuts}
+        shortcuts={shortcuts || {
+          toggleMic: 'm',
+          toggleVideo: 'v',
+          toggleScreenShare: 's',
+          pushToTalk: ' ',
+          showHelp: '?',
+          closeModal: 'Escape',
+          sendMessage: 'Enter',
+          search: 'k'
+        }}
       />
+    </div>
+  );
+}
