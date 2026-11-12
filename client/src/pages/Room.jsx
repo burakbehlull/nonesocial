@@ -4,12 +4,15 @@ import toast from 'react-hot-toast';
 import { getSocket } from '@services/socket';
 import { useSocketAudio } from '@hooks/useSocketAudio';
 import { useTypingIndicator } from '@hooks/useTypingIndicator';
+import { useKeyboardShortcuts } from '@hooks/useKeyboardShortcuts';
 import { useRoomStore } from '@store/roomStore';
 import { useTheme } from '@contexts/ThemeContext';
 import UserBubbles from '@components/UserBubbles';
 import ChatMessages from '@components/ChatMessages';
 import MentionAutocomplete from '@components/MentionAutocomplete';
 import TypingIndicator from '@components/TypingIndicator';
+import SettingsModal from '@components/SettingsModal';
+import ShortcutsHelpModal from '@components/ShortcutsHelpModal';
 import { Card } from '@components/ui/card';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
@@ -41,6 +44,10 @@ export default function Room() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [editingUserName, setEditingUserName] = useState('');
+  
+  // 🔥 Settings & Shortcuts Modals
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
   // 🔥 Mention System State
   const [showMentions, setShowMentions] = useState(false);
@@ -77,6 +84,40 @@ export default function Room() {
   
   // 🔥 Typing Indicator Hook
   const { typingUsers, startTyping, stopTyping } = useTypingIndicator(roomId, 3000);
+  
+  // 🔥 Keyboard Shortcuts Hook
+  const { shortcuts } = useKeyboardShortcuts({
+    onToggleMic: () => {
+      if (isInCall) {
+        toggleAudio();
+      } else {
+        toast.error('Önce çağrıya katılmalısınız');
+      }
+    },
+    onToggleVideo: () => {
+      // Video toggle (future feature)
+      toast('Video özelliği yakında eklenecek', { icon: '🎥' });
+    },
+    onToggleScreenShare: () => {
+      // Screen share (future feature)
+      toast('Ekran paylaşımı yakında eklenecek', { icon: '🖥️' });
+    },
+    onShowHelp: () => {
+      setShowShortcutsHelp(true);
+    },
+    onCloseModal: () => {
+      // Close any open modal
+      setShowSettingsModal(false);
+      setShowShortcutsHelp(false);
+      setShowNameModal(false);
+      setShowUserMenu(false);
+    },
+    onSearch: () => {
+      // Search (future feature)
+      toast('Arama özelliği yakında eklenecek', { icon: '🔍' });
+    },
+    disabled: false
+  });
   
   // ⚠️ DUPLICATE FIX: Aynı currentUserId ile birden fazla user varsa sadece birini al
   const users = useMemo(() => {
@@ -563,6 +604,16 @@ export default function Room() {
             </IconButton>
           </div>
 
+          {/* Settings Button */}
+          <IconButton
+            variant="ghost"
+            onClick={() => setShowSettingsModal(true)}
+            tooltip="Ayarlar (Klavye kısayolları)"
+            className="hidden sm:flex"
+          >
+            <Settings className="w-4 h-4 md:w-5 md:h-5" />
+          </IconButton>
+
           {/* Theme Toggle */}
           <IconButton
             variant="ghost"
@@ -580,8 +631,8 @@ export default function Room() {
             onClick={() => setShowNameModal(true)}
             className="gap-2 hidden sm:flex"
           >
-            <Settings className="w-4 h-4" />
-            <span className="hidden md:inline">İsim</span>
+            <span className="hidden md:inline">İsim Değiştir</span>
+            <span className="md:hidden">İsim</span>
           </Button>
 
           {/* Call Buttons - Responsive */}
@@ -1139,3 +1190,18 @@ export default function Room() {
   );
 
 }
+
+      
+      {/* Settings Modal */}
+      <SettingsModal 
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        shortcuts={shortcuts}
+      />
+      
+      {/* Shortcuts Help Modal (? key) */}
+      <ShortcutsHelpModal
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+        shortcuts={shortcuts}
+      />
