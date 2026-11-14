@@ -3,18 +3,12 @@ import { io } from 'socket.io-client';
 // Fallback ile server URL
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
-console.log('🔌 Connecting to:', SERVER_URL);
-
 let socket = null;
 
 export const initSocket = () => {
   if (!socket) {
     // Get or generate auth token
     let authToken = localStorage.getItem('authToken');
-    
-    console.log('🔌 Initializing socket...');
-    console.log('   📦 authToken from localStorage:', authToken ? authToken.slice(0, 30) + '...' : 'NULL');
-    console.log('   🆔 userId from localStorage:', localStorage.getItem('userId'));
     
     socket = io(SERVER_URL, {
       transports: ['websocket', 'polling'],
@@ -27,54 +21,32 @@ export const initSocket = () => {
     });
 
     socket.on('connect', () => {
-      console.log('✅ Connected to server:', socket.id);
-      console.log('   🔑 Using userId:', localStorage.getItem('userId'));
+      // Connected successfully
     });
 
     socket.on('disconnect', () => {
-      console.log('❌ Disconnected from server');
+      // Disconnected
     });
 
     socket.on('connect_error', (error) => {
-      console.error('❌ Connection error:', error.message);
-      console.error('Server URL:', SERVER_URL);
+      console.error('Connection error:', error.message);
     });
 
     // Receive auth token from server (for new users)
     socket.on('auth-token', ({ token, userId, sessionId }) => {
-      const oldUserId = localStorage.getItem('userId');
-      const oldToken = localStorage.getItem('authToken');
-      
-      console.log('🔑 Received NEW auth token from server');
-      console.log('   Old userId:', oldUserId || 'NULL');
-      console.log('   New userId:', userId);
-      console.log('   Old token:', oldToken ? oldToken.slice(0, 20) + '...' : 'NULL');
-      console.log('   New token:', token.slice(0, 20) + '...');
-      
       localStorage.setItem('authToken', token);
       localStorage.setItem('userId', userId);
       localStorage.setItem('sessionId', sessionId);
-      
-      // ⚠️ UYARI: Eğer token değiştiyse, yeni token ile reconnect et
-      if (oldUserId && oldUserId !== userId) {
-        console.error('🚨 DUPLICATE USER BUG DETECTED!');
-        console.error('   This means socket reconnected with different userId!');
-        console.error('   Old:', oldUserId, '→ New:', userId);
-        console.error('   This will create duplicate users in backend!');
-      }
     });
 
     // Handle errors from server
     socket.on('error', (error) => {
-      console.error('❌ Server error:', error.message);
-      // You can show this to user via toast/notification
+      console.error('Server error:', error.message);
     });
 
     // Handle being kicked from room
     socket.on('kicked', ({ roomId, reason }) => {
-      console.warn('⚠️ You were kicked from room:', roomId, reason);
       alert(`You were kicked from the room: ${reason || 'No reason provided'}`);
-      // Redirect to home or show modal
       window.location.href = '/';
     });
   }

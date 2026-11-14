@@ -28,70 +28,69 @@ const Home = () => {
 
   // Initialize socket when component mounts
   useEffect(() => {
-    console.log('🏠 Home component mounted, initializing socket...');
     const socket = initSocket();
     
-    // Wait for socket to connect
-    if (socket.connected) {
-      console.log('✅ Socket already connected');
-      setSocketReady(true);
-    } else {
-      const onConnect = () => {
-        console.log('✅ Socket connected on mount');
+    // Check connection status immediately
+    const checkConnection = () => {
+      if (socket.connected) {
         setSocketReady(true);
-      };
-      
-      const onConnectError = (error) => {
-        console.error('❌ Socket connection error:', error.message);
-        // Still allow user to try (will show proper error on create)
-        setSocketReady(true);
-      };
-      
-      socket.on('connect', onConnect);
-      socket.on('connect_error', onConnectError);
-      
-      // Set timeout - if not connected in 3 seconds, allow anyway
-      const timeout = setTimeout(() => {
-        console.warn('⚠️  Socket not connected after 3s, allowing user to try...');
-        setSocketReady(true);
-      }, 3000);
-      
-      return () => {
-        clearTimeout(timeout);
-        socket.off('connect', onConnect);
-        socket.off('connect_error', onConnectError);
-      };
+        return true;
+      }
+      return false;
+    };
+    
+    // Check immediately
+    if (checkConnection()) {
+      return;
     }
+    
+    const onConnect = () => {
+      setSocketReady(true);
+    };
+    
+    const onConnectError = (error) => {
+      // Allow user to try anyway (will retry on click)
+      setSocketReady(true);
+    };
+    
+    socket.on('connect', onConnect);
+    socket.on('connect_error', onConnectError);
+    
+    // Emergency timeout - enable after 2 seconds regardless
+    const emergencyTimeout = setTimeout(() => {
+      if (!socket.connected) {
+        setSocketReady(true);
+      }
+    }, 2000);
+    
+    return () => {
+      clearTimeout(emergencyTimeout);
+      socket.off('connect', onConnect);
+      socket.off('connect_error', onConnectError);
+    };
   }, []);
 
   const handleCreateRoom = () => {
-
     const nameError = validateRoomName(roomName);
     if (nameError) {
-      console.error('❌ Name validation failed:', nameError);
       toast.error(nameError);
       return;
     }
 
     const passwordError = validatePassword(password);
     if (passwordError) {
-      console.error('❌ Password validation failed:', passwordError);
       toast.error(passwordError);
       return;
     }
 
     const socket = getSocket();
-    console.log('🔌 Socket:', socket?.connected ? 'CONNECTED' : 'DISCONNECTED');
-    console.log('🔌 Socket ID:', socket?.id);
     
     if (!socket) {
-      console.error('❌ Socket instance not available!');
       toast.error('Bağlantı hatası. Sayfayı yenileyin.');
       return;
     }
     
     if (!socket.connected) {
-      console.warn('⚠️  Socket not connected yet, waiting...');
       toast.loading('Bağlantı kuruluyor...', { id: 'socket-wait' });
       
       let connected = false;
@@ -100,8 +99,6 @@ const Home = () => {
       const timeout = setTimeout(() => {
         if (!connected) {
           toast.error('Backend sunucusu çalışmıyor. Lütfen sunucuyu başlatın.', { id: 'socket-wait' });
-          console.error('❌ Timeout: Socket could not connect');
-          console.error('📝 Make sure backend is running on http://localhost:3000');
         }
       }, 5000);
       
@@ -109,7 +106,6 @@ const Home = () => {
         connected = true;
         clearTimeout(timeout);
         toast.dismiss('socket-wait');
-        console.log('✅ Socket connected, retrying room creation...');
         // Retry room creation
         handleCreateRoom();
       });
@@ -117,17 +113,13 @@ const Home = () => {
       return;
     }
 
-    console.log('📤 Emitting createRoom event...');
     socket.emit('createRoom', {
       name: roomName,
       password: password || null,
       limit: limit,
       videoEnabled: true
     }, (response) => {
-      console.log('📥 Received response:', response);
-      
       if (response?.success) {
-        console.log('✅ Room created successfully:', response.roomId);
         navigate(`/room/${response.roomId}`, { state: { isCreator: true } });
       } else {
         console.error('❌ Room creation failed:', response?.message || 'Unknown error');
