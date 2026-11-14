@@ -101,6 +101,15 @@ export default async (io, socket) => {
   });
   // Create a new room
   socket.on('createRoom', async ({ name, password, limit, videoEnabled }, callback) => {
+    console.log('🏗️  createRoom event received');
+    console.log('   userId:', socket.userId);
+    console.log('   socketId:', socket.id);
+    console.log('   name:', name);
+    console.log('   password:', password ? '***' : 'none');
+    console.log('   limit:', limit);
+    console.log('   videoEnabled:', videoEnabled);
+    console.log('   callback exists:', !!callback);
+
     try {
       // Rate limiting
       await createRoomLimiter.consume(socket.userId);
@@ -108,6 +117,7 @@ export default async (io, socket) => {
       // Validation
       const validation = validate(schemas.createRoom, { name, password, limit, videoEnabled });
       if (!validation.valid) {
+        console.error('❌ Validation failed:', validation.errors);
         logger.warn({
           type: 'VALIDATION_FAILED',
           event: 'createRoom',
@@ -116,6 +126,8 @@ export default async (io, socket) => {
         });
         return callback?.({ success: false, message: validation.errors });
       }
+
+      console.log('✅ Validation passed');
 
       const data = validation.value;
 
@@ -181,6 +193,9 @@ export default async (io, socket) => {
 
       io.to(roomId).emit('roomUsers', getUsers(roomId));
 
+      console.log('✅ Room created successfully:', roomId);
+      console.log('   Calling callback with success...');
+
       callback?.({ 
         success: true, 
         roomId, 
@@ -192,6 +207,8 @@ export default async (io, socket) => {
         }
       });
     } catch (error) {
+      console.error('❌ CREATE_ROOM_ERROR:', error.message);
+      console.error('   Stack:', error.stack);
       logger.error({
         type: 'CREATE_ROOM_ERROR',
         userId: socket.userId,

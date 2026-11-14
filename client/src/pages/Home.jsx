@@ -26,29 +26,50 @@ const Home = () => {
   const { isDark, toggleTheme } = useTheme();
 
   const handleCreateRoom = () => {
+    console.log('🏠 handleCreateRoom triggered');
+    console.log('   roomName:', roomName);
+    console.log('   password:', password ? '***' : 'none');
+    console.log('   limit:', limit);
+
     const nameError = validateRoomName(roomName);
     if (nameError) {
+      console.error('❌ Name validation failed:', nameError);
       toast.error(nameError);
       return;
     }
 
     const passwordError = validatePassword(password);
     if (passwordError) {
+      console.error('❌ Password validation failed:', passwordError);
       toast.error(passwordError);
       return;
     }
 
     const socket = getSocket();
+    console.log('🔌 Socket:', socket?.connected ? 'CONNECTED' : 'DISCONNECTED');
+    console.log('🔌 Socket ID:', socket?.id);
+    
+    if (!socket || !socket.connected) {
+      console.error('❌ Socket not connected!');
+      toast.error('Bağlantı kurulamadı. Sayfayı yenileyin.');
+      return;
+    }
+
+    console.log('📤 Emitting createRoom event...');
     socket.emit('createRoom', {
       name: roomName,
       password: password || null,
       limit: limit,
       videoEnabled: true
     }, (response) => {
-      if (response.success) {
+      console.log('📥 Received response:', response);
+      
+      if (response?.success) {
+        console.log('✅ Room created successfully:', response.roomId);
         navigate(`/room/${response.roomId}`, { state: { isCreator: true } });
       } else {
-        toast.error('Oda oluşturulamadı');
+        console.error('❌ Room creation failed:', response?.message || 'Unknown error');
+        toast.error(response?.message || 'Oda oluşturulamadı');
       }
     });
   };
