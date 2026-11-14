@@ -21,6 +21,13 @@ export const useRoomStore = create((set) => ({
   
   setMessages: (messages) => set({ messages }),
   
+  // Update user name in all messages
+  updateUserName: (userId, newName) => set((state) => ({
+    messages: state.messages.map(msg => 
+      msg.from === userId ? { ...msg, name: newName } : msg
+    )
+  })),
+  
   clearMessages: () => set({ messages: [] }),
   
   clearRoom: () => set({

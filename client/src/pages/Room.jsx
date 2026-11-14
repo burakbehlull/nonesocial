@@ -72,6 +72,7 @@ export default function Room() {
     setCurrentUserId: setStoreCurrentUserId,
     setUsers,
     addMessage,
+    updateUserName,
     clearRoom
   } = useRoomStore();
 
@@ -239,6 +240,11 @@ export default function Room() {
 
     socketInstance.on('receiveMessage', (message) => addMessage(message));
     
+    // Listen for name changes
+    socketInstance.on('nameChanged', ({ userId, newName }) => {
+      updateUserName(userId, newName);
+    });
+    
     // 🔥 Mention Notification
     socketInstance.on('mentioned', ({ message, mentionedBy }) => {
       const mentionerName = mentionedBy?.name || 'Birisi';
@@ -294,6 +300,7 @@ export default function Room() {
 
     return () => {
       socketInstance.off('receiveMessage');
+      socketInstance.off('nameChanged');
       socketInstance.off('mentioned'); // 🔥 Mention event cleanup
       socketInstance.off('kicked');
       socketInstance.off('banned');
@@ -580,7 +587,6 @@ export default function Room() {
             variant="ghost"
             onClick={handleCopyLink}
             tooltip="Oda linkini kopyala"
-            className="hidden sm:flex"
           >
             <Copy className="w-4 h-4" />
           </IconButton>
@@ -711,17 +717,17 @@ export default function Room() {
 
           {/* Voice Chat Users - Hidden on Mobile when Empty */}
           <div className={`flex-1 overflow-auto scrollbar-thin p-2 md:p-4 ${
-            users.filter(u => u.inCall).length === 0 ? 'hidden md:block' : ''
+            users.filter(u => u.inCall).length === 0 && !isInCall ? 'hidden md:block' : ''
           }`}>
             {/* Header - Her zaman göster */}
             <div className="flex flex-col items-center gap-3 pb-3 border-b border-border/50 mb-4">
               <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                users.filter(u => u.inCall).length > 0 
+                (users.filter(u => u.inCall).length > 0 || isInCall)
                   ? 'bg-primary/10' 
                   : 'bg-muted/20'
               }`}>
                 <Mic className={`w-8 h-8 ${
-                  users.filter(u => u.inCall).length > 0 
+                  (users.filter(u => u.inCall).length > 0 || isInCall)
                     ? 'text-primary animate-pulse' 
                     : 'text-muted-foreground/40'
                 }`} />
@@ -729,13 +735,13 @@ export default function Room() {
               <div className="text-center">
                 <p className="text-sm font-semibold">Sesli Sohbet</p>
                 <p className="text-xs text-muted-foreground">
-                  {users.filter(u => u.inCall).length} kişi çağrıda
+                  {users.filter(u => u.inCall).length + (isInCall && !users.find(u => u.id === currentUserId)?.inCall ? 1 : 0)} kişi çağrıda
                 </p>
               </div>
             </div>
 
             {/* Çağrıdaki kullanıcılar */}
-            {users.filter(u => u.inCall).length > 0 ? (
+            {(users.filter(u => u.inCall).length > 0 || isInCall) ? (
               <div className="space-y-3">
                 {/* Kendin (eğer çağrıdaysan) - ÖNCELİKLİ */}
                 {isInCall && (

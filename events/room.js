@@ -41,7 +41,22 @@ const ROOM_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 
 // Kullanıcı adı oluştur
 const generateGuestName = () => {
-  return 'Nobody';
+  const adjectives = [
+    'Anonim', 'Gizli', 'Saklı', 'Gizemli', 'Sessiz',
+    'Hızlı', 'Yeşil', 'Mavi', 'Kırmızı', 'Mor',
+    'Parlak', 'Karanlık', 'Renkli', 'Şanslı', 'Cesur'
+  ];
+  const nouns = [
+    'Kullanıcı', 'Ziyaretçi', 'Misafir', 'Katılımcı', 'Üye',
+    'Kedi', 'Köpek', 'Kuş', 'Balık', 'Panda',
+    'Gezgin', 'Savaşçı', 'Ninja', 'Kahraman', 'Yıldız'
+  ];
+  
+  const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+  const randomNum = Math.floor(Math.random() * 1000);
+  
+  return `${randomAdjective} ${randomNoun} ${randomNum}`;
 };
 
 // Clean expired rooms every hour
@@ -399,7 +414,12 @@ export default async (io, socket) => {
         newName: sanitized
       });
 
+      // Emit name change to all users (including updated user list and name change event)
       io.to(roomId).emit('roomUsers', getUsers(roomId));
+      io.to(roomId).emit('nameChanged', { 
+        userId: socket.userId, 
+        newName: sanitized 
+      });
       
       callback?.({ success: true });
     } catch (error) {

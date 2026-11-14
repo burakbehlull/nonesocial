@@ -162,7 +162,7 @@ const ChatMessages = ({ messages, currentUserId, highlightMessageId = null }) =>
     <div className="relative flex-1 flex flex-col">
       <div 
         ref={messagesContainerRef} 
-        className="flex-1 overflow-y-auto px-6 py-4 space-y-3 scroll-smooth chat-scrollbar"
+        className="flex-1 overflow-y-auto px-6 py-4 space-y-2 scroll-smooth chat-scrollbar"
         onScroll={handleScroll}
       >
       {groupedMessages.map((group, groupIndex) => {
