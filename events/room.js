@@ -41,22 +41,7 @@ const ROOM_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 
 // Kullanıcı adı oluştur
 const generateGuestName = () => {
-  const adjectives = [
-    'Anonim', 'Gizli', 'Saklı', 'Gizemli', 'Sessiz',
-    'Hızlı', 'Yeşil', 'Mavi', 'Kırmızı', 'Mor',
-    'Parlak', 'Karanlık', 'Renkli', 'Şanslı', 'Cesur'
-  ];
-  const nouns = [
-    'Kullanıcı', 'Ziyaretçi', 'Misafir', 'Katılımcı', 'Üye',
-    'Kedi', 'Köpek', 'Kuş', 'Balık', 'Panda',
-    'Gezgin', 'Savaşçı', 'Ninja', 'Kahraman', 'Yıldız'
-  ];
-  
-  const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-  const randomNum = Math.floor(Math.random() * 1000);
-  
-  return `${randomAdjective} ${randomNoun} ${randomNum}`;
+  return 'Nobody';
 };
 
 // Clean expired rooms every hour
@@ -945,6 +930,13 @@ export default async (io, socket) => {
   
   // Send voice message
   socket.on('sendVoiceMessage', async ({ roomId, audioData, duration }) => {
+    console.log('🎤 Voice message received:', {
+      roomId,
+      userId: socket.userId,
+      duration,
+      audioDataSize: audioData?.length
+    });
+    
     try {
       // Rate limiting (voice messages count as 2 regular messages)
       await messageLimiter.consume(socket.userId, 2);
@@ -968,10 +960,21 @@ export default async (io, socket) => {
         audioData: audioData, // Base64 encoded audio
         duration: Math.floor(duration),
         timestamp: Date.now(),
-        type: 'voice' // Voice message type
+        type: 'voice', // Voice message type
+        role: socket.userId === room.ownerId ? 'owner' : 'member'
       };
 
+      console.log('✅ Voice message created:', {
+        id: msg.id,
+        from: msg.from,
+        name: msg.name,
+        type: msg.type,
+        duration: msg.duration
+      });
+
       io.to(roomId).emit('receiveMessage', msg);
+      
+      console.log('✅ Voice message emitted to room:', roomId);
       
       logger.info({
         type: 'VOICE_MESSAGE_SENT',

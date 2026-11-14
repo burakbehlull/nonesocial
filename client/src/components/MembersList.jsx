@@ -1,10 +1,20 @@
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { FaCrown } from 'react-icons/fa';
 import { FiMic, FiMicOff, FiVideo, FiVideoOff, FiPhone, FiPhoneOff } from 'react-icons/fi';
+import VolumeControl from './VolumeControl';
 
-const MemberItem = ({ user, isInCall, hasAudio, hasVideo, isCurrentUser }) => {
+const MemberItem = ({ user, isInCall, hasAudio, hasVideo, isCurrentUser, onVolumeClick, userVolume }) => {
   return (
-    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+    <div 
+      className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+      onClick={(e) => {
+        // Kendine veya çağrıda olmayanlara tıklanırsa işlem yapma
+        if (isCurrentUser || !isInCall) return;
+        onVolumeClick?.(e, user);
+      }}
+      title={!isCurrentUser && isInCall ? 'Ses seviyesini ayarla' : ''}
+    >
       {/* Avatar */}
       <div className="relative">
         <Avatar className="h-8 w-8">
@@ -21,6 +31,23 @@ const MemberItem = ({ user, isInCall, hasAudio, hasVideo, isCurrentUser }) => {
             ) : (
               <FiMicOff className="w-2 h-2 text-white" />
             )}
+          </div>
+        )}
+        
+        {/* Volume Indicator - Sadece seste olanlara ve kendisi değilse */}
+        {isInCall && !isCurrentUser && (
+          <div className="absolute -top-0.5 -left-0.5 bg-background rounded-full p-0.5 shadow-sm border border-border">
+            <div className="relative w-3.5 h-3.5 rounded-full bg-muted overflow-hidden">
+              <div 
+                className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary to-primary/70 transition-all duration-300"
+                style={{ height: `${userVolume / 2}%` }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-[6px] font-bold text-foreground drop-shadow">
+                  {userVolume === 0 ? '🔇' : userVolume >= 150 ? '📢' : '🔊'}
+                </span>
+              </div>
+            </div>
           </div>
         )}
         
@@ -79,6 +106,47 @@ const MembersList = ({
   videoEnabled,
   peers 
 }) => {
+  const [volumeControlUser, setVolumeControlUser] = useState(null);
+  const [volumeControlPosition, setVolumeControlPosition] = useState({ x: 0, y: 0 });
+  const [userVolumes, setUserVolumes] = useState({}); // { userId: volume }
+
+  const handleVolumeClick = (event, user) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setVolumeControlPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.bottom
+    });
+    setVolumeControlUser(user);
+  };
+
+  const handleVolumeChange = (userId, volume) => {
+    setUserVolumes(prev => ({
+      ...prev,
+      [userId]: volume
+    }));
+    
+    // LocalStorage'a kaydet (persist için)
+    localStorage.setItem(`volume_${userId}`, volume.toString());
+    
+    console.log(`🔊 Ses seviyesi değişti: ${userId.slice(0, 8)} → ${volume}%`);
+  };
+
+  const handleCloseVolumeControl = () => {
+    setVolumeControlUser(null);
+  };
+
+  // LocalStorage'dan kullanıcı ses seviyelerini yükle
+  useEffect(() => {
+    const loadedVolumes = {};
+    users.forEach(user => {
+      const savedVolume = localStorage.getItem(`volume_${user.id}`);
+      if (savedVolume) {
+        loadedVolumes[user.id] = parseInt(savedVolume);
+      }
+    });
+    setUserVolumes(loadedVolumes);
+  }, [users.map(u => u.id).join(',')]); // users değişince yükle
+  
   // Kullanıcının ses durumunu kontrol et
   const getUserCallStatus = (userId) => {
     // Kendimiz miyiz?
@@ -101,6 +169,18 @@ const MembersList = ({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Volume Control Popover */}
+      {volumeControlUser && (
+        <VolumeControl
+          userId={volumeControlUser.id}
+          userName={volumeControlUser.name}
+          volume={userVolumes[volumeControlUser.id] || 100}
+          onVolumeChange={handleVolumeChange}
+          position={volumeControlPosition}
+          onClose={handleCloseVolumeControl}
+        />
+      )}
+      
       {/* Başlık */}
       <div className="p-4 border-b">
         <h3 className="font-semibold flex items-center gap-2">
@@ -118,6 +198,7 @@ const MembersList = ({
         ) : (
           users.map(user => {
             const { isInCall, hasAudio, hasVideo } = getUserCallStatus(user.id);
+            const userVolume = userVolumes[user.id] || 100;
             
             return (
               <MemberItem
@@ -127,6 +208,8 @@ const MembersList = ({
                 hasAudio={hasAudio}
                 hasVideo={hasVideo}
                 isCurrentUser={user.id === currentUserId}
+                onVolumeClick={handleVolumeClick}
+                userVolume={userVolume}
               />
             );
           })

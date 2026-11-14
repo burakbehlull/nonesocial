@@ -238,7 +238,16 @@ export default function Room() {
       });
     });
 
-    socketInstance.on('receiveMessage', (message) => addMessage(message));
+    socketInstance.on('receiveMessage', (message) => {
+      console.log('📩 Message received:', {
+        id: message.id,
+        type: message.type,
+        from: message.from,
+        name: message.name,
+        hasAudioData: !!message.audioData
+      });
+      addMessage(message);
+    });
     
     // Listen for name changes
     socketInstance.on('nameChanged', ({ userId, newName }) => {
@@ -928,16 +937,46 @@ export default function Room() {
             {showVoiceRecorder ? (
               <VoiceRecorder
                 onSend={(audioBlob, duration) => {
+                  console.log('🎤 Voice message send initiated:', { 
+                    blobSize: audioBlob.size, 
+                    duration,
+                    roomId 
+                  });
+                  
                   const socket = getSocket();
+                  
+                  if (!socket) {
+                    console.error('❌ Socket not found!');
+                    toast.error('Bağlantı hatası. Sayfayı yenileyin.');
+                    return;
+                  }
+                  
+                  if (!socket.connected) {
+                    console.error('❌ Socket not connected!');
+                    toast.error('Bağlantı kesildi. Sayfayı yenileyin.');
+                    return;
+                  }
+                  
                   const reader = new FileReader();
                   reader.onloadend = () => {
                     const base64Audio = reader.result;
+                    console.log('✅ Audio converted to base64, size:', base64Audio.length);
+                    
                     socket.emit('sendVoiceMessage', { 
                       roomId, 
                       audioData: base64Audio,
                       duration 
                     });
+                    
+                    console.log('✅ Voice message emitted to server');
+                    toast.success('Sesli mesaj gönderildi!');
                   };
+                  
+                  reader.onerror = (error) => {
+                    console.error('❌ FileReader error:', error);
+                    toast.error('Ses dosyası okunamadı!');
+                  };
+                  
                   reader.readAsDataURL(audioBlob);
                   setShowVoiceRecorder(false);
                 }}
