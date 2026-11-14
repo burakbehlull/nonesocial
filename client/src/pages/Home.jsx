@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   Video, Lock, Users, LogIn, Moon, Sun,
   Sparkles, Shield, Zap, Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getSocket } from '@services/socket';
+import { initSocket, getSocket } from '@services/socket';
 import { validateRoomName, validatePassword } from '@utils/helpers';
 import { useTheme } from '@contexts/ThemeContext';
 import { Button } from '@components/ui/button';
@@ -22,14 +22,34 @@ const Home = () => {
   const [limit, setLimit] = useState(10);
   const [joinRoomId, setJoinRoomId] = useState('');
   const [joinPassword, setJoinPassword] = useState('');
+  const [socketReady, setSocketReady] = useState(false);
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
 
+  // Initialize socket when component mounts
+  useEffect(() => {
+    console.log('🏠 Home component mounted, initializing socket...');
+    const socket = initSocket();
+    
+    // Wait for socket to connect
+    if (socket.connected) {
+      console.log('✅ Socket already connected');
+      setSocketReady(true);
+    } else {
+      const onConnect = () => {
+        console.log('✅ Socket connected on mount');
+        setSocketReady(true);
+      };
+      
+      socket.on('connect', onConnect);
+      
+      return () => {
+        socket.off('connect', onConnect);
+      };
+    }
+  }, []);
+
   const handleCreateRoom = () => {
-    console.log('🏠 handleCreateRoom triggered');
-    console.log('   roomName:', roomName);
-    console.log('   password:', password ? '***' : 'none');
-    console.log('   limit:', limit);
 
     const nameError = validateRoomName(roomName);
     if (nameError) {
@@ -50,8 +70,22 @@ const Home = () => {
     console.log('🔌 Socket ID:', socket?.id);
     
     if (!socket || !socket.connected) {
-      console.error('❌ Socket not connected!');
-      toast.error('Bağlantı kurulamadı. Sayfayı yenileyin.');
+      console.warn('⚠️  Socket not connected yet, waiting...');
+      toast.loading('Bağlantı kuruluyor...', { id: 'socket-wait' });
+      
+      // Wait for connection with timeout
+      const timeout = setTimeout(() => {
+        toast.error('Bağlantı zaman aşımına uğradı. Sayfayı yenileyin.', { id: 'socket-wait' });
+      }, 5000);
+      
+      socket.once('connect', () => {
+        clearTimeout(timeout);
+        toast.dismiss('socket-wait');
+        console.log('✅ Socket connected, retrying room creation...');
+        // Retry room creation
+        handleCreateRoom();
+      });
+      
       return;
     }
 
@@ -146,10 +180,11 @@ const Home = () => {
                   size="lg"
                   className="text-lg px-8 py-6 shadow-premium-xl hover:shadow-premium-lg interactive"
                   onClick={() => setShowCreateModal(true)}
+                  disabled={!socketReady}
                   aria-label="Yeni oda oluştur"
                 >
                   <Video className="w-5 h-5 mr-2" />
-                  Yeni Oda Oluştur
+                  {!socketReady ? 'Bağlanıyor...' : 'Yeni Oda Oluştur'}
                 </Button>
                 <Button
                   variant="outline"
@@ -293,10 +328,12 @@ const Home = () => {
               </Button>
               <Button 
                 onClick={handleCreateRoom} 
+                disabled={!socketReady}
                 className="flex-1 shadow-premium"
                 aria-label="Oda oluştur"
               >
-                Oluştur
+                {!socketReady ? 'Bağlanıyor...' : 'Oluştur'}
+              </Button>
               </Button>
             </CardFooter>
           </Card>
