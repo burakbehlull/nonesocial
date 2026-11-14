@@ -41,10 +41,25 @@ const Home = () => {
         setSocketReady(true);
       };
       
+      const onConnectError = (error) => {
+        console.error('❌ Socket connection error:', error.message);
+        // Still allow user to try (will show proper error on create)
+        setSocketReady(true);
+      };
+      
       socket.on('connect', onConnect);
+      socket.on('connect_error', onConnectError);
+      
+      // Set timeout - if not connected in 3 seconds, allow anyway
+      const timeout = setTimeout(() => {
+        console.warn('⚠️  Socket not connected after 3s, allowing user to try...');
+        setSocketReady(true);
+      }, 3000);
       
       return () => {
+        clearTimeout(timeout);
         socket.off('connect', onConnect);
+        socket.off('connect_error', onConnectError);
       };
     }
   }, []);
@@ -69,16 +84,29 @@ const Home = () => {
     console.log('🔌 Socket:', socket?.connected ? 'CONNECTED' : 'DISCONNECTED');
     console.log('🔌 Socket ID:', socket?.id);
     
-    if (!socket || !socket.connected) {
+    if (!socket) {
+      console.error('❌ Socket instance not available!');
+      toast.error('Bağlantı hatası. Sayfayı yenileyin.');
+      return;
+    }
+    
+    if (!socket.connected) {
       console.warn('⚠️  Socket not connected yet, waiting...');
       toast.loading('Bağlantı kuruluyor...', { id: 'socket-wait' });
       
+      let connected = false;
+      
       // Wait for connection with timeout
       const timeout = setTimeout(() => {
-        toast.error('Bağlantı zaman aşımına uğradı. Sayfayı yenileyin.', { id: 'socket-wait' });
+        if (!connected) {
+          toast.error('Backend sunucusu çalışmıyor. Lütfen sunucuyu başlatın.', { id: 'socket-wait' });
+          console.error('❌ Timeout: Socket could not connect');
+          console.error('📝 Make sure backend is running on http://localhost:3000');
+        }
       }, 5000);
       
       socket.once('connect', () => {
+        connected = true;
         clearTimeout(timeout);
         toast.dismiss('socket-wait');
         console.log('✅ Socket connected, retrying room creation...');
