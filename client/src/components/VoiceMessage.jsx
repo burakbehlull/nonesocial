@@ -6,10 +6,10 @@ import { Button } from '@components/ui/button';
 /**
  * Voice Message Component
  * Displays a voice message with playback controls and waveform
+ * Always displays on the left side with sender name for clarity
  */
 export default function VoiceMessage({ 
   message, 
-  isOwnMessage, 
   userName 
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -71,38 +71,29 @@ export default function VoiceMessage({
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className={`flex gap-2 sm:gap-3 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-      {/* Avatar */}
-      {!isOwnMessage && (
-        <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 border-2 border-primary/10">
-          <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-primary/20 to-primary/10">
-            {(userName || 'U')[0].toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-      )}
+    <div className="flex gap-2 sm:gap-3 flex-row">
+      {/* Avatar - Always show on left */}
+      <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 border-2 border-primary/10">
+        <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-primary/20 to-primary/10">
+          {(userName || 'U')[0].toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
 
-      {/* Voice Message Bubble */}
-      <div
-        className={`
-          flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-2xl max-w-xs sm:max-w-sm
-          ${isOwnMessage 
-            ? 'bg-primary text-primary-foreground' 
-            : 'bg-muted'
-          }
-        `}
-      >
+      {/* Voice Message Content */}
+      <div className="flex flex-col gap-1">
+        {/* Sender Name */}
+        <span className="text-xs font-semibold text-foreground px-1">
+          {userName || 'Guest'}
+        </span>
+        
+        {/* Voice Message Bubble */}
+        <div className="flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-2xl bg-muted max-w-xs sm:max-w-sm">
         {/* Play/Pause Button */}
         <Button
           onClick={togglePlayback}
           size="icon"
           variant="ghost"
-          className={`
-            h-8 w-8 sm:h-10 sm:w-10 rounded-full flex-shrink-0
-            ${isOwnMessage 
-              ? 'hover:bg-primary-foreground/20 text-primary-foreground' 
-              : 'hover:bg-background/50'
-            }
-          `}
+          className="h-8 w-8 sm:h-10 sm:w-10 rounded-full flex-shrink-0 hover:bg-background/50"
         >
           {isPlaying ? (
             <Pause className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -126,13 +117,9 @@ export default function VoiceMessage({
                   <div
                     key={i}
                     className={`flex-1 rounded-full transition-all duration-75 ${
-                      isOwnMessage
-                        ? isPassed 
-                          ? 'bg-primary-foreground' 
-                          : 'bg-primary-foreground/30'
-                        : isPassed 
-                          ? 'bg-primary' 
-                          : 'bg-muted-foreground/30'
+                      isPassed 
+                        ? 'bg-primary' 
+                        : 'bg-muted-foreground/30'
                     }`}
                     style={{ 
                       height: `${height * 100}%`,
@@ -145,10 +132,7 @@ export default function VoiceMessage({
           </div>
 
           {/* Time Display */}
-          <div className={`
-            text-xs mt-1 font-mono
-            ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}
-          `}>
+          <div className="text-xs mt-1 font-mono text-muted-foreground">
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
         </div>
@@ -157,5 +141,6 @@ export default function VoiceMessage({
         <audio ref={audioRef} src={audioUrl} preload="metadata" className="hidden" />
       </div>
     </div>
+  </div>
   );
 }

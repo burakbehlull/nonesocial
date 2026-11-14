@@ -214,11 +214,10 @@ const ChatMessages = ({ messages, currentUserId, highlightMessageId = null }) =>
               <div className="space-y-0.5">
                 {group.messages.map((msg) => (
                   msg.type === 'voice' ? (
-                    // Voice Message
+                    // Voice Message - Always on left with sender name
                     <VoiceMessage
                       key={msg.id}
                       message={msg}
-                      isOwnMessage={isSelf}
                       userName={group.userName}
                     />
                   ) : (
