@@ -360,7 +360,6 @@ const Home = () => {
               >
                 {!socketReady ? 'Bağlanıyor...' : 'Oluştur'}
               </Button>
-              </Button>
             </CardFooter>
           </Card>
         </div>
