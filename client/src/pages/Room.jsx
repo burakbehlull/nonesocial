@@ -14,6 +14,7 @@ import TypingIndicator from '@components/TypingIndicator';
 import SettingsModal from '@components/SettingsModal';
 import ShortcutsHelpModal from '@components/ShortcutsHelpModal';
 import MessageSearch from '@components/MessageSearch';
+import VoiceRecorder from '@components/VoiceRecorder';
 import { Card } from '@components/ui/card';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
@@ -51,6 +52,7 @@ export default function Room() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showMessageSearch, setShowMessageSearch] = useState(false);
   const [highlightMessageId, setHighlightMessageId] = useState(null);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
 
   // 🔥 Mention System State
   const [showMentions, setShowMentions] = useState(false);
@@ -916,27 +918,59 @@ export default function Room() {
               </div>
             )}
             
-            <div className="flex items-center gap-2 md:gap-3">
-              <Input
-                ref={messageInputRef}
-                placeholder="Mesajınızı yazın..."
-                value={messageInput}
-                onChange={handleMessageInputChange}
-                onKeyDown={handleMessageInputKeyDown}
-                className="flex-1 h-9 md:h-11 text-sm md:text-base bg-background border-border/50 focus-visible:ring-primary/20 shadow-sm"
-                aria-label="Mesaj yazın"
+            {/* Voice Recorder (shows when recording) */}
+            {showVoiceRecorder ? (
+              <VoiceRecorder
+                onSend={(audioBlob, duration) => {
+                  // TODO: Send voice message via socket
+                  const socket = getSocket();
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    const base64Audio = reader.result;
+                    socket.emit('sendVoiceMessage', { 
+                      roomId, 
+                      audioData: base64Audio,
+                      duration 
+                    });
+                  };
+                  reader.readAsDataURL(audioBlob);
+                  setShowVoiceRecorder(false);
+                }}
+                onCancel={() => setShowVoiceRecorder(false)}
               />
-              <Button
-                size="default"
-                onClick={handleSendMessage}
-                disabled={!messageInput.trim()}
-                className="px-3 md:px-5 gap-1 md:gap-2 shadow-premium h-9 md:h-11"
-                aria-label="Mesaj gönder"
-              >
-                <Send className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                <span className="hidden sm:inline">Gönder</span>
-              </Button>
-            </div>
+            ) : (
+              <div className="flex items-center gap-2 md:gap-3">
+                {/* Voice Message Button */}
+                <IconButton
+                  variant="ghost"
+                  onClick={() => setShowVoiceRecorder(true)}
+                  tooltip="Sesli mesaj gönder"
+                  className="flex-shrink-0"
+                >
+                  <Mic className="w-4 h-4 md:w-5 md:h-5" />
+                </IconButton>
+
+                <Input
+                  ref={messageInputRef}
+                  placeholder="Mesajınızı yazın..."
+                  value={messageInput}
+                  onChange={handleMessageInputChange}
+                  onKeyDown={handleMessageInputKeyDown}
+                  className="flex-1 h-9 md:h-11 text-sm md:text-base bg-background border-border/50 focus-visible:ring-primary/20 shadow-sm"
+                  aria-label="Mesaj yazın"
+                />
+                <Button
+                  size="default"
+                  onClick={handleSendMessage}
+                  disabled={!messageInput.trim()}
+                  className="px-3 md:px-5 gap-1 md:gap-2 shadow-premium h-9 md:h-11"
+                  aria-label="Mesaj gönder"
+                >
+                  <Send className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span className="hidden sm:inline">Gönder</span>
+                </Button>
+              </div>
+            )}
           </div>
         </main>
 

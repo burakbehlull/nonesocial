@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Crown, MessageSquare, ArrowDown } from 'lucide-react';
+import VoiceMessage from './VoiceMessage';
 
 const formatTime = (timestamp) => {
   const date = new Date(timestamp);
@@ -212,12 +213,23 @@ const ChatMessages = ({ messages, currentUserId, highlightMessageId = null }) =>
               {/* Message Group - Premium Style with Mention Highlighting */}
               <div className="space-y-0.5">
                 {group.messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className="text-[15px] leading-relaxed break-words px-3 py-1.5 rounded-lg hover:bg-muted/40 transition-colors duration-150"
-                  >
-                    {parseMentions(msg.content, msg.mentions, currentUserId)}
-                  </div>
+                  msg.type === 'voice' ? (
+                    // Voice Message
+                    <VoiceMessage
+                      key={msg.id}
+                      message={msg}
+                      isOwnMessage={isSelf}
+                      userName={group.userName}
+                    />
+                  ) : (
+                    // Text Message
+                    <div
+                      key={msg.id}
+                      className="text-[15px] leading-relaxed break-words px-3 py-1.5 rounded-lg hover:bg-muted/40 transition-colors duration-150"
+                    >
+                      {parseMentions(msg.content, msg.mentions, currentUserId)}
+                    </div>
+                  )
                 ))}
               </div>
             </div>

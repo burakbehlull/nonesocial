@@ -923,6 +923,52 @@ export default async (io, socket) => {
 
   // ===== Typing Indicator Events =====
   
+  // Send voice message
+  socket.on('sendVoiceMessage', async ({ roomId, audioData, duration }) => {
+    try {
+      // Rate limiting (voice messages count as 2 regular messages)
+      await messageLimiter.consume(socket.userId, 2);
+
+      const room = rooms[roomId];
+      if (!room || !room.members[socket.userId]) {
+        return;
+      }
+
+      const member = room.members[socket.userId];
+
+      // Validate duration (max 60 seconds)
+      if (duration > 60 || duration < 1) {
+        return;
+      }
+
+      const msg = {
+        id: nanoid(),
+        from: socket.userId,
+        name: member.name,
+        audioData: audioData, // Base64 encoded audio
+        duration: Math.floor(duration),
+        timestamp: Date.now(),
+        type: 'voice' // Voice message type
+      };
+
+      io.to(roomId).emit('receiveMessage', msg);
+      
+      logger.info({
+        type: 'VOICE_MESSAGE_SENT',
+        roomId,
+        userId: socket.userId,
+        duration: duration
+      });
+    } catch (error) {
+      logger.error({
+        type: 'SEND_VOICE_MESSAGE_ERROR',
+        roomId,
+        userId: socket.userId,
+        error: error.message
+      });
+    }
+  });
+  
   // Kullanıcı yazmaya başladı
   socket.on('startTyping', ({ roomId }) => {
     const room = rooms[roomId];
