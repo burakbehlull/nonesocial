@@ -930,13 +930,6 @@ export default async (io, socket) => {
   
   // Send voice message
   socket.on('sendVoiceMessage', async ({ roomId, audioData, duration }) => {
-    console.log('🎤 Voice message received:', {
-      roomId,
-      userId: socket.userId,
-      duration,
-      audioDataSize: audioData?.length
-    });
-    
     try {
       // Rate limiting (voice messages count as 2 regular messages)
       await messageLimiter.consume(socket.userId, 2);
@@ -964,17 +957,7 @@ export default async (io, socket) => {
         role: socket.userId === room.ownerId ? 'owner' : 'member'
       };
 
-      console.log('✅ Voice message created:', {
-        id: msg.id,
-        from: msg.from,
-        name: msg.name,
-        type: msg.type,
-        duration: msg.duration
-      });
-
       io.to(roomId).emit('receiveMessage', msg);
-      
-      console.log('✅ Voice message emitted to room:', roomId);
       
       logger.info({
         type: 'VOICE_MESSAGE_SENT',
@@ -1090,7 +1073,9 @@ export default async (io, socket) => {
   // Helper function
   function getUsers(roomId) {
     const room = rooms[roomId];
-    if (!room) return [];
+    if (!room) {
+      return [];
+    }
     
     const activeUsers = Object.entries(room.members)
       .filter(([_, member]) => !member.disconnectedAt) // Only active users

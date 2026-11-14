@@ -220,8 +220,6 @@ export const useSocketAudio = (roomId) => {
 
     // Room users
     const handleRoomUsers = (roomUsers) => {
-      console.log('👥 Room users:', roomUsers.length, 'kullanıcı');
-      console.log('  🔊 Çağrıda:', roomUsers.filter(u => u.inCall).length, 'kullanıcı');
       setUsers(roomUsers);
     };
 

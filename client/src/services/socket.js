@@ -29,7 +29,19 @@ export const initSocket = () => {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Connection error:', error.message);
+      // If authentication failed, clear token and retry
+      if (error.message === 'Authentication failed') {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('sessionId');
+        
+        // Reconnect without token
+        if (socket) {
+          socket.disconnect();
+          socket = null;
+          initSocket();
+        }
+      }
     });
 
     // Receive auth token from server (for new users)
@@ -41,7 +53,7 @@ export const initSocket = () => {
 
     // Handle errors from server
     socket.on('error', (error) => {
-      console.error('Server error:', error.message);
+      // Silent error handling
     });
 
     // Handle being kicked from room

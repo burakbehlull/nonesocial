@@ -76,11 +76,27 @@ export const socketAuthMiddleware = (socket, next) => {
 
   if (!valid) {
     logger.warn({
-      type: 'AUTH_FAILED',
+      type: 'AUTH_FAILED_REGENERATING',
       ip: socket.handshake.address,
       error
     });
-    return next(new Error('Authentication failed'));
+    
+    // Generate new token instead of rejecting
+    const { token: newToken, userId, sessionId } = generateToken();
+    socket.userId = userId;
+    socket.sessionId = sessionId;
+    socket.isNewUser = true;
+    
+    // Send new token to client
+    socket.emit('auth-token', { token: newToken, userId, sessionId });
+    
+    logger.info({
+      type: 'NEW_TOKEN_GENERATED_FOR_INVALID',
+      userId,
+      ip: socket.handshake.address
+    });
+    
+    return next();
   }
 
   socket.userId = data.userId;

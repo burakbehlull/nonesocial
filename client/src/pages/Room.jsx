@@ -128,17 +128,15 @@ export default function Room() {
   
   // ⚠️ DUPLICATE FIX: Aynı currentUserId ile birden fazla user varsa sadece birini al
   const users = useMemo(() => {
-    if (!rawUsers || rawUsers.length === 0) return [];
+    if (!rawUsers || rawUsers.length === 0) {
+      return [];
+    }
     
     // currentUserId'li user'ı bul
     const myUsers = rawUsers.filter(u => u.id === currentUserId);
     const otherUsers = rawUsers.filter(u => u.id !== currentUserId);
     
     if (myUsers.length > 1) {
-      console.warn('⚠️ DUPLICATE USER DETECTED!', {
-        currentUserId,
-        duplicates: myUsers.map(u => ({ id: u.id, name: u.name, inCall: u.inCall }))
-      });
       // Sadece ilkini al (veya inCall olanı tercih et)
       const preferredUser = myUsers.find(u => u.inCall) || myUsers[0];
       return [preferredUser, ...otherUsers];
@@ -158,14 +156,11 @@ export default function Room() {
     
     // Eğer userId varsa socket hazır
     if (localStorage.getItem('userId')) {
-      console.log('✅ Socket ready with userId:', localStorage.getItem('userId'));
       setSocketReady(true);
     } else {
       // userId gelene kadar bekle
-      console.log('⏳ Waiting for userId from auth-token...');
       const checkUserId = setInterval(() => {
         if (localStorage.getItem('userId')) {
-          console.log('✅ UserId received:', localStorage.getItem('userId'));
           setSocketReady(true);
           clearInterval(checkUserId);
         }
@@ -175,7 +170,6 @@ export default function Room() {
       setTimeout(() => {
         clearInterval(checkUserId);
         if (!localStorage.getItem('userId')) {
-          console.error('❌ UserId timeout! Continuing anyway...');
           setSocketReady(true);
         }
       }, 5000);
@@ -187,13 +181,11 @@ export default function Room() {
   useEffect(() => {
     // Socket hazır değilse bekle
     if (!socketReady) {
-      console.log('⏳ Socket not ready yet...');
       return;
     }
     
     // React Strict Mode double render protection
     if (initialized.current) {
-      console.log('⚠️ useEffect already ran, skipping...');
       return;
     }
     initialized.current = true;
@@ -212,8 +204,6 @@ export default function Room() {
       // Store'a da kaydet (ama kullanmayacağız, sadece backward compatibility için)
       const userId = localStorage.getItem('userId');
       setStoreCurrentUserId(userId);
-      
-      console.log('👤 Current User ID:', userId);
 
       socketInstance.emit('joinRoom', { roomId, password }, (joinResponse) => {
         if (!joinResponse.success) {
@@ -239,13 +229,6 @@ export default function Room() {
     });
 
     socketInstance.on('receiveMessage', (message) => {
-      console.log('📩 Message received:', {
-        id: message.id,
-        type: message.type,
-        from: message.from,
-        name: message.name,
-        hasAudioData: !!message.audioData
-      });
       addMessage(message);
     });
     
@@ -552,7 +535,6 @@ export default function Room() {
       });
     } catch (error) {
       toast.error('Mikrofon erişimi reddedildi', { id: 'join-call' });
-      console.error('Media error:', error);
     }
   };
 
@@ -572,7 +554,6 @@ export default function Room() {
       }
     } catch (error) {
       toast.error('Kamera erişimi reddedildi', { id: 'camera' });
-      console.error('Camera error:', error);
     }
   };
 
@@ -937,22 +918,14 @@ export default function Room() {
             {showVoiceRecorder ? (
               <VoiceRecorder
                 onSend={(audioBlob, duration) => {
-                  console.log('🎤 Voice message send initiated:', { 
-                    blobSize: audioBlob.size, 
-                    duration,
-                    roomId 
-                  });
-                  
                   const socket = getSocket();
                   
                   if (!socket) {
-                    console.error('❌ Socket not found!');
                     toast.error('Bağlantı hatası. Sayfayı yenileyin.');
                     return;
                   }
                   
                   if (!socket.connected) {
-                    console.error('❌ Socket not connected!');
                     toast.error('Bağlantı kesildi. Sayfayı yenileyin.');
                     return;
                   }
@@ -960,7 +933,6 @@ export default function Room() {
                   const reader = new FileReader();
                   reader.onloadend = () => {
                     const base64Audio = reader.result;
-                    console.log('✅ Audio converted to base64, size:', base64Audio.length);
                     
                     socket.emit('sendVoiceMessage', { 
                       roomId, 
@@ -968,12 +940,10 @@ export default function Room() {
                       duration 
                     });
                     
-                    console.log('✅ Voice message emitted to server');
                     toast.success('Sesli mesaj gönderildi!');
                   };
                   
                   reader.onerror = (error) => {
-                    console.error('❌ FileReader error:', error);
                     toast.error('Ses dosyası okunamadı!');
                   };
                   
