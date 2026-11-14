@@ -13,6 +13,7 @@ import MentionAutocomplete from '@components/MentionAutocomplete';
 import TypingIndicator from '@components/TypingIndicator';
 import SettingsModal from '@components/SettingsModal';
 import ShortcutsHelpModal from '@components/ShortcutsHelpModal';
+import MessageSearch from '@components/MessageSearch';
 import { Card } from '@components/ui/card';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
@@ -21,7 +22,7 @@ import { Separator } from '@components/ui/separator';
 import { IconButton } from '@components/ui/icon-button';
 import { Badge } from '@components/ui/badge';
 import { 
-  Copy, Settings, Users, Send, 
+  Copy, Settings, Users, Send, Search,
   Mic, MicOff, 
   PhoneOff, Moon, Sun, UserX,
   PhoneIncoming, PhoneOutgoing, Crown,
@@ -48,6 +49,8 @@ export default function Room() {
   // 🔥 Settings & Shortcuts Modals
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
+  const [highlightMessageId, setHighlightMessageId] = useState(null);
 
   // 🔥 Mention System State
   const [showMentions, setShowMentions] = useState(false);
@@ -109,12 +112,13 @@ export default function Room() {
       // Close any open modal
       setShowSettingsModal(false);
       setShowShortcutsHelp(false);
+      setShowMessageSearch(false);
       setShowNameModal(false);
       setShowUserMenu(false);
     },
     onSearch: () => {
-      // Search (future feature)
-      toast('Arama özelliği yakında eklenecek', { icon: '🔍' });
+      // Open message search modal
+      setShowMessageSearch(true);
     },
     disabled: false
   });
@@ -604,6 +608,15 @@ export default function Room() {
             </IconButton>
           </div>
 
+          {/* Search Button */}
+          <IconButton
+            variant="ghost"
+            onClick={() => setShowMessageSearch(true)}
+            tooltip="Mesaj Ara (Ctrl+K)"
+          >
+            <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+          </IconButton>
+
           {/* Settings Button */}
           <IconButton
             variant="ghost"
@@ -861,7 +874,11 @@ export default function Room() {
           {/* Messages */}
           <div className="flex-1 overflow-hidden flex flex-col">
             <div className="flex-1 overflow-y-auto">
-              <ChatMessages messages={messages} currentUserId={currentUserId} />
+              <ChatMessages 
+                messages={messages} 
+                currentUserId={currentUserId} 
+                highlightMessageId={highlightMessageId}
+              />
             </div>
             
             {/* Typing Indicator */}
@@ -1199,6 +1216,20 @@ export default function Room() {
           closeModal: 'Escape',
           sendMessage: 'Enter',
           search: 'k'
+        }}
+      />
+
+      {/* Message Search Modal (Ctrl+K) */}
+      <MessageSearch
+        isOpen={showMessageSearch}
+        onClose={() => setShowMessageSearch(false)}
+        messages={messages}
+        users={users.map(u => ({ id: u.id, name: u.name }))}
+        currentUserId={currentUserId}
+        onJumpToMessage={(message) => {
+          setHighlightMessageId(message.id);
+          // Clear highlight after 2 seconds
+          setTimeout(() => setHighlightMessageId(null), 2000);
         }}
       />
     </div>

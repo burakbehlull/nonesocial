@@ -65,9 +65,10 @@ const parseMentions = (content, mentions = [], currentUserId) => {
   return <>{parts}</>;
 };
 
-const ChatMessages = ({ messages, currentUserId }) => {
+const ChatMessages = ({ messages, currentUserId, highlightMessageId = null }) => {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const messageRefs = useRef({});
   const [showScrollButton, setShowScrollButton] = useState(false);
 
   const scrollToBottom = () => {
@@ -84,6 +85,20 @@ const ChatMessages = ({ messages, currentUserId }) => {
     const isScrolledToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
     setShowScrollButton(!isScrolledToBottom);
   };
+
+  // Highlight ve scroll to specific message
+  useEffect(() => {
+    if (highlightMessageId && messageRefs.current[highlightMessageId]) {
+      const element = messageRefs.current[highlightMessageId];
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Highlight animation
+      element.classList.add('highlight-pulse');
+      setTimeout(() => {
+        element.classList.remove('highlight-pulse');
+      }, 2000);
+    }
+  }, [highlightMessageId]);
 
   // Sadece yeni mesaj geldiğinde otomatik scroll
   useEffect(() => {
@@ -157,6 +172,12 @@ const ChatMessages = ({ messages, currentUserId }) => {
           <div 
             key={groupIndex} 
             className="flex gap-3 group animate-in"
+            ref={(el) => {
+              // Store refs for all messages in this group
+              group.messages.forEach(msg => {
+                if (el) messageRefs.current[msg.id] = el;
+              });
+            }}
           >
             {/* Avatar */}
             <Avatar className="h-10 w-10 flex-shrink-0 border-2 border-primary/10">
