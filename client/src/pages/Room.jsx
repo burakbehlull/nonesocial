@@ -922,7 +922,6 @@ export default function Room() {
             {showVoiceRecorder ? (
               <VoiceRecorder
                 onSend={(audioBlob, duration) => {
-                  // TODO: Send voice message via socket
                   const socket = getSocket();
                   const reader = new FileReader();
                   reader.onloadend = () => {
@@ -940,15 +939,16 @@ export default function Room() {
               />
             ) : (
               <div className="flex items-center gap-2 md:gap-3">
-                {/* Voice Message Button */}
-                <IconButton
-                  variant="ghost"
+                {/* Voice Message Button - Prominent */}
+                <Button
+                  variant="outline"
+                  size="icon"
                   onClick={() => setShowVoiceRecorder(true)}
-                  tooltip="Sesli mesaj gönder"
-                  className="flex-shrink-0"
+                  className="h-9 w-9 md:h-11 md:w-11 flex-shrink-0 rounded-full hover:bg-primary/10 hover:border-primary transition-all"
+                  aria-label="Sesli mesaj gönder"
                 >
-                  <Mic className="w-4 h-4 md:w-5 md:h-5" />
-                </IconButton>
+                  <Mic className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+                </Button>
 
                 <Input
                   ref={messageInputRef}
