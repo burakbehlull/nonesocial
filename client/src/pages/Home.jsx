@@ -132,14 +132,6 @@ const Home = () => {
         toast.error(errorMsg);
       }
     });
-    
-    // Timeout protection - if no response in 5 seconds, something is wrong
-    const responseTimeout = setTimeout(() => {
-      toast.error('Sunucu yanıt vermiyor. Backend loglarını kontrol edin.');
-    }, 5000);
-    
-    // Clear timeout if we get response (will be cleared by navigation anyway)
-    socket.once('roomUsers', () => clearTimeout(responseTimeout));
   };
 
   const handleJoinRoom = () => {
