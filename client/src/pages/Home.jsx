@@ -91,23 +91,26 @@ const Home = () => {
     }
     
     if (!socket.connected) {
-      toast.loading('Bağlantı kuruluyor...', { id: 'socket-wait' });
+      toast.loading('Bağlantı kuruluyor...', { id: 'socket-wait', duration: 3000 });
       
       let connected = false;
+      let retried = false;
       
       // Wait for connection with timeout
       const timeout = setTimeout(() => {
-        if (!connected) {
-          toast.error('Backend sunucusu çalışmıyor. Lütfen sunucuyu başlatın.', { id: 'socket-wait' });
+        if (!connected && !retried) {
+          toast.error('Backend sunucusu yanıt vermiyor', { id: 'socket-wait' });
         }
-      }, 5000);
+      }, 3000);
       
       socket.once('connect', () => {
+        if (retried) return; // Prevent double call
         connected = true;
+        retried = true;
         clearTimeout(timeout);
         toast.dismiss('socket-wait');
-        // Retry room creation
-        handleCreateRoom();
+        // Retry room creation immediately
+        setTimeout(() => handleCreateRoom(), 100);
       });
       
       return;
@@ -122,10 +125,21 @@ const Home = () => {
       if (response?.success) {
         navigate(`/room/${response.roomId}`, { state: { isCreator: true } });
       } else {
-        console.error('❌ Room creation failed:', response?.message || 'Unknown error');
-        toast.error(response?.message || 'Oda oluşturulamadı');
+        // Handle error message (can be string or array)
+        const errorMsg = Array.isArray(response?.message) 
+          ? response.message.join(', ') 
+          : (response?.message || 'Oda oluşturulamadı');
+        toast.error(errorMsg);
       }
     });
+    
+    // Timeout protection - if no response in 5 seconds, something is wrong
+    const responseTimeout = setTimeout(() => {
+      toast.error('Sunucu yanıt vermiyor. Backend loglarını kontrol edin.');
+    }, 5000);
+    
+    // Clear timeout if we get response (will be cleared by navigation anyway)
+    socket.once('roomUsers', () => clearTimeout(responseTimeout));
   };
 
   const handleJoinRoom = () => {

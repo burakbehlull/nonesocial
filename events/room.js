@@ -101,6 +101,12 @@ export default async (io, socket) => {
   });
   // Create a new room
   socket.on('createRoom', async ({ name, password, limit, videoEnabled }, callback) => {
+    // Ensure callback exists
+    if (!callback || typeof callback !== 'function') {
+      console.error('ERROR: callback is not a function!', typeof callback);
+      return;
+    }
+
     try {
       // Rate limiting
       await createRoomLimiter.consume(socket.userId);
