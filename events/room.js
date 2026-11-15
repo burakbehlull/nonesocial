@@ -430,7 +430,20 @@ export default async (io, socket) => {
       }
 
       const room = rooms[roomId];
-      if (!room || !room.members[socket.userId]) {
+      
+      // Debug log
+      if (!room) {
+        logger.warn({ type: 'SEND_MESSAGE_ROOM_NOT_FOUND', roomId, userId: socket.userId });
+        return callback?.({ success: false, message: 'Room not found' });
+      }
+      
+      if (!room.members[socket.userId]) {
+        logger.warn({ 
+          type: 'SEND_MESSAGE_USER_NOT_IN_ROOM', 
+          roomId, 
+          userId: socket.userId,
+          roomMembers: Object.keys(room.members)
+        });
         return callback?.({ success: false, message: 'Not in room' });
       }
 
