@@ -4,7 +4,6 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import mongoSanitize from 'express-mongo-sanitize';
 import dotenv from 'dotenv';
 import eventLoader from './events/eventLoader.js';
 import logger from './utils/logger.js';
@@ -79,32 +78,35 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Handle preflight requests - use proper wildcard syntax
+// Handle preflight requests
 app.use((req, res, next) => {
+  // Set CORS headers for all requests
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    // For same-origin requests (like admin-login.html), allow self
+    res.header('Access-Control-Allow-Origin', req.headers.origin || req.protocol + '://' + req.get('host'));
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
   if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.header('Access-Control-Allow-Credentials', 'true');
     return res.sendStatus(200);
   }
   next();
 });
 
 app.use(express.json({ limit: '10kb' })); // Limit request body size
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
-// Security: NoSQL injection prevention
-app.use(mongoSanitize({
-  replaceWith: '_',
-  onSanitize: ({ req, key }) => {
-    logger.warn({
-      type: 'NOSQL_INJECTION_ATTEMPT',
-      ip: req.ip,
-      path: req.path,
-      sanitizedKey: key
-    });
-  }
-}));
+// Serve static files
+app.use(express.static('public'));
+
+// Note: express-mongo-sanitize removed due to Express 5 incompatibility
+// Sanitization is handled in route-level validators using utils/sanitize.js
 
 // Security: Rate limiting for HTTP endpoints
 const apiLimiter = rateLimit({
