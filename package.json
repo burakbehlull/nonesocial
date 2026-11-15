@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "make-admin": "node scripts/make-admin.js"
+    "make-admin": "node scripts/make-admin.js",
+    "client": "cd client && npm run dev",
+    "all": "concurrently \"npm run dev\" \"npm run client\" --names \"SERVER,CLIENT\" --prefix-colors \"blue,green\""
   },
   "keywords": [
     "webrtc",
@@ -33,5 +35,8 @@
     "ua-parser-js": "^1.0.38",
     "validator": "^13.15.35",
     "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
   }
 }
