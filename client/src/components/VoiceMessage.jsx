@@ -71,23 +71,21 @@ export default function VoiceMessage({
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="flex gap-2 sm:gap-3 flex-row">
-      {/* Avatar - Always show on left */}
-      <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 border-2 border-primary/10">
-        <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-primary/20 to-primary/10">
-          {(userName || 'U')[0].toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
-
-      {/* Voice Message Content */}
-      <div className="flex flex-col gap-1">
-        {/* Sender Name */}
-        <span className="text-xs font-semibold text-foreground px-1">
+    <div className="flex flex-col gap-1">
+      {/* Sender Info - Top */}
+      <div className="flex items-center gap-2 px-1">
+        <Avatar className="h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0 border border-primary/10">
+          <AvatarFallback className="text-[10px] sm:text-xs font-semibold bg-gradient-to-br from-primary/20 to-primary/10">
+            {(userName || 'U')[0].toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <span className="text-xs font-semibold text-foreground">
           {userName || 'Guest'}
         </span>
-        
-        {/* Voice Message Bubble */}
-        <div className="flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-2xl bg-muted max-w-xs sm:max-w-sm">
+      </div>
+      
+      {/* Voice Message Player - Bottom */}
+      <div className="flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-2xl bg-muted max-w-xs sm:max-w-sm ml-0">
         {/* Play/Pause Button */}
         <Button
           onClick={togglePlayback}
@@ -141,6 +139,5 @@ export default function VoiceMessage({
         <audio ref={audioRef} src={audioUrl} preload="metadata" className="hidden" />
       </div>
     </div>
-  </div>
   );
 }
